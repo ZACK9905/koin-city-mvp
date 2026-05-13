@@ -2,101 +2,172 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Koin City · 成长型人生游戏 MVP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Koin City · 成长型人生游戏</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 <div class="app">
-  <section class="hero">
-    <div class="top-row">
-      <div>
-        <h1>🌱 Koin City 成长型人生游戏</h1>
-        <p>不是记账 App，而是孩子的"未来人格成长系统"：用城市成长、人生选择、AI导师提问和家长成长报告，让孩子练习金钱观、判断力、自律、目标感与抗挫力。</p>
+
+  <!-- ── HOME PAGE ────────────────────────────── -->
+  <main id="page-home" class="page active">
+
+    <!-- Premium Hero Header -->
+    <div class="home-header">
+      <div class="home-header-inner">
+        <div class="home-header-text">
+          <div class="greeting">🌱 Koin City · Day <span id="heroDay">1</span></div>
+          <h1 id="welcomeTitle">欢迎回来！</h1>
+          <p class="subtitle">今天又是建造世界的好日子～</p>
+
+          <!-- Coin pill -->
+          <div class="header-coins" style="display:inline-flex;margin-top:10px">
+            <span class="coin-icon">🪙</span>
+            <span id="coinCount">0</span> 金币
+            &nbsp;·&nbsp; ⚡ <span id="energyCount">100</span>
+          </div>
+        </div>
+
+        <!-- Avatar -->
+        <div>
+          <div class="header-avatar" id="avatarMood">🧒</div>
+          <div style="text-align:center;margin-top:6px;font-size:11px;font-weight:900;color:rgba(255,255,255,.75)">
+            Lv.<span id="levelCount">1</span> &nbsp;🔥 <span id="streakCount">0</span>天
+          </div>
+        </div>
       </div>
-      <div class="city-preview">
-        <div class="building" id="houseView">🏚️</div>
-        <div class="building" id="shopView">🏪</div>
-        <div class="building" id="petView">🥚</div>
-        <div class="building">🌳</div>
-        <div class="building">🏫</div>
-        <div class="building">🏦</div>
+
+      <!-- XP bar -->
+      <div class="hero-xp-strip">
+        <div class="hero-level-badge">Lv.<span id="levelText">1</span></div>
+        <div class="hero-xp-track">
+          <div class="hero-xp-fill" id="xpFill" style="width:0%"></div>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.7);font-weight:800">XP</div>
       </div>
     </div>
-  </section>
 
-  <nav class="nav" id="mainNav">
-    <button class="active" data-page="home">🌎 我的世界</button>
-    <button data-page="story">🎮 人生事件</button>
-    <button data-page="city">🏙️ Koin City</button>
-    <button data-page="quests">📜 每日任务</button>
-    <button data-page="npc">🧍 NPC</button>
-    <button data-page="mentor">🤖 AI导师</button>
-    <button data-page="parent">👨‍👩‍👧 家长报告</button>
-    <button data-page="settings">⚙️ 设定</button>
-  </nav>
+    <!-- City preview strip -->
+    <div class="city-strip">
+      <div class="city-strip-item"><span id="houseView">🏚️</span><span>我的家</span></div>
+      <div class="city-strip-item"><span id="shopView">🏪</span><span>商店</span></div>
+      <div class="city-strip-item"><span id="petView">🥚</span><span>宠物</span></div>
+      <div class="city-strip-item"><span>🌳</span><span>公园</span></div>
+      <div class="city-strip-item"><span>🏫</span><span>学校</span></div>
+      <div class="city-strip-item"><span>🏦</span><span>银行</span></div>
+    </div>
 
-  <main id="page-home" class="page active">
+    <!-- Next action hint -->
     <div class="hint-banner" id="nextActionBanner">
       <div class="icon">🧭</div>
-      <div>
+      <div style="flex:1">
         <b id="nextActionTitle">下一步建议</b>
         <p class="muted" id="nextActionText">先完成一个人生事件，获得金币和 XP。</p>
         <div class="action-row" id="nextActionButtons"></div>
       </div>
     </div>
 
+    <!-- Stats row -->
     <div class="top-stats">
-      <div class="mini-stat"><div class="big" id="coinCount">0</div><span>金币</span></div>
-      <div class="mini-stat"><div class="big" id="levelCount">1</div><span>等级</span></div>
-      <div class="mini-stat"><div class="big" id="streakCount">0</div><span>连续天数</span></div>
-      <div class="mini-stat"><div class="big" id="energyCount">100</div><span>能量</span></div>
-    </div>
-
-    <div class="card avatar-room">
-      <div class="avatar-box" id="avatarMood">🧒</div>
-      <div>
-        <h2 id="welcomeTitle">欢迎回来，小小人生玩家</h2>
-        <p class="muted">你不是在记账，而是在打造属于自己的未来人生。你的每一个决定，都会改变你的城市、人格与未来路线。</p>
-        <div style="margin-top:14px;font-weight:800">Level <span id="levelText">1</span></div>
-        <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div class="mini-stat">
+        <div class="big" id="m-discipline-mini">50</div>
+        <span>自律</span>
+      </div>
+      <div class="mini-stat">
+        <div class="big" id="m-saving-mini">50</div>
+        <span>储蓄</span>
+      </div>
+      <div class="mini-stat">
+        <div class="big" id="m-judgment-mini">50</div>
+        <span>判断力</span>
+      </div>
+      <div class="mini-stat">
+        <div class="big" id="m-resilience-mini">50</div>
+        <span>抗挫力</span>
       </div>
     </div>
 
-    <div class="grid">
-      <div class="metric"><div class="label">自律 Discipline</div><div class="value" id="m-discipline">50%</div><div class="bar"><div class="fill" id="b-discipline"></div></div></div>
-      <div class="metric"><div class="label">储蓄稳定 Saving</div><div class="value" id="m-saving">50%</div><div class="bar"><div class="fill" id="b-saving"></div></div></div>
-      <div class="metric"><div class="label">判断力 Judgment</div><div class="value" id="m-judgment">50%</div><div class="bar"><div class="fill" id="b-judgment"></div></div></div>
-      <div class="metric"><div class="label">抗挫力 Resilience</div><div class="value" id="m-resilience">50%</div><div class="bar"><div class="fill" id="b-resilience"></div></div></div>
+    <!-- Metrics detail -->
+    <div class="section-label">📊 成长数据</div>
+    <div class="grid" style="padding:0 16px">
+      <div class="metric">
+        <div class="label">自律 Discipline</div>
+        <div class="value" id="m-discipline">50%</div>
+        <div class="bar"><div class="fill" id="b-discipline"></div></div>
+      </div>
+      <div class="metric">
+        <div class="label">储蓄稳定 Saving</div>
+        <div class="value" id="m-saving">50%</div>
+        <div class="bar"><div class="fill" id="b-saving"></div></div>
+      </div>
+      <div class="metric">
+        <div class="label">判断力 Judgment</div>
+        <div class="value" id="m-judgment">50%</div>
+        <div class="bar"><div class="fill" id="b-judgment"></div></div>
+      </div>
+      <div class="metric">
+        <div class="label">抗挫力 Resilience</div>
+        <div class="value" id="m-resilience">50%</div>
+        <div class="bar"><div class="fill" id="b-resilience"></div></div>
+      </div>
     </div>
 
-    <div class="card"><h2>🧠 AI 个性分析</h2><div id="personalityTags"></div><p class="muted" id="personalityText"></p></div>
-    <div class="card"><h2>📍 当前人生路线</h2><div class="storybox" id="lifeSummary"></div></div>
+    <!-- Personality analysis -->
+    <div class="section-label">🧠 AI 个性分析</div>
+    <div class="analysis-card card">
+      <div id="personalityTags"></div>
+      <p class="muted" id="personalityText" style="margin-top:8px"></p>
+    </div>
+
+    <!-- Life summary -->
+    <div class="section-label">📍 当前人生路线</div>
+    <div class="card">
+      <div class="storybox" id="lifeSummary"></div>
+    </div>
+
+    <div class="footer-note">Koin City · 每一次选择，都会建造你的未来。</div>
   </main>
 
+  <!-- ── STORY PAGE ─────────────────────────── -->
   <main id="page-story" class="page">
-    <div class="card"><h2>🎮 今日人生事件</h2><p class="muted">每次选择都会改变成长数据、金币、XP、剧情路线和家长报告。</p></div>
-    <div class="card"><h2 id="sceneTitle"></h2><div class="storybox" id="sceneText"></div><div style="height:14px"></div><div id="choices"></div></div>
-    <div class="card"><h2>🗺️ 人生记录</h2><div class="timeline" id="timeline"></div></div>
+    <div style="height:16px"></div>
+    <div class="card">
+      <h2>🎮 今日人生事件</h2>
+      <p class="muted">今天会出现一个人生事件。你的选择会影响金币、XP、成长能力和后续路线。</p>
+    </div>
+    <div class="card">
+      <h2 id="sceneTitle"></h2>
+      <div class="storybox" id="sceneText"></div>
+      <div style="height:14px"></div>
+      <div id="choices"></div>
+    </div>
+    <div class="card">
+      <h2>🗺️ 人生记录</h2>
+      <div class="timeline" id="timeline"></div>
+    </div>
+    <div style="height:16px"></div>
   </main>
 
+  <!-- ── CITY PAGE ──────────────────────────── -->
   <main id="page-city" class="page">
+    <div style="height:16px"></div>
+
     <div class="guide-card">
-      <h2>🏙️ Koin City 怎么玩？</h2>
-      <p class="muted">这里是成长后的视觉奖励区。先完成人生事件和每日任务赚金币，再回来升级房间、宠物和区域。</p>
+      <h2 style="font-family:'Fredoka',sans-serif;font-size:17px;margin-bottom:8px">🏙️ Koin City 怎么玩？</h2>
+      <p class="muted">拖动地图探索不同区域，点击地点看看今天有什么可以做。</p>
       <div class="guide-steps">
-        <div class="guide-step"><b>1️⃣ 拖动地图</b><span class="muted">按住地图左右拖动，探索不同区域。</span></div>
-        <div class="guide-step"><b>2️⃣ 点击区域</b><span class="muted">点🏠、🏪、🏫 查看可以做什么。</span></div>
-        <div class="guide-step"><b>3️⃣ 赚金币</b><span class="muted">去每日任务或人生事件获得奖励。</span></div>
-        <div class="guide-step"><b>4️⃣ 解锁区域</b><span class="muted">Level 3 解锁创业中心，Level 6 解锁未来都市。</span></div>
+        <div class="guide-step"><b>1️⃣ 拖动地图</b><span class="muted">左右拖动探索区域</span></div>
+        <div class="guide-step"><b>2️⃣ 点击区域</b><span class="muted">点击图标查看内容</span></div>
+        <div class="guide-step"><b>3️⃣ 赚金币</b><span class="muted">完成任务获得奖励</span></div>
+        <div class="guide-step"><b>4️⃣ 解锁区域</b><span class="muted">Lv.3 创业 / Lv.6 未来</span></div>
       </div>
     </div>
 
     <div class="world-map-wrap" id="mapWrap">
       <div class="world-map" id="worldMap">
         <div class="weather" id="weatherBox">☀️ Sunny Day</div>
-        <div class="map-cloud" style="width:140px;height:46px;top:42px;left:70px"></div>
-        <div class="map-cloud" style="width:110px;height:40px;top:110px;right:80px"></div>
+        <div class="map-cloud" style="width:140px;height:44px;top:38px;left:80px"></div>
+        <div class="map-cloud" style="width:110px;height:38px;top:100px;right:90px"></div>
         <svg width="100%" height="100%" style="position:absolute;inset:0;pointer-events:none;z-index:1">
           <path d="M140 500 C240 460,290 390,365 335" stroke="#d6b98e" stroke-width="18" fill="none" stroke-linecap="round" opacity=".85"/>
           <path d="M420 320 C500 300,575 265,640 230" stroke="#d6b98e" stroke-width="18" fill="none" stroke-linecap="round" opacity=".85"/>
@@ -110,39 +181,142 @@
       </div>
     </div>
 
-    <div id="zoneInfo" class="card"><h2>🗺️ 区域资讯</h2><div class="storybox" id="zoneContent">点击地图上的区域，探索你的世界。</div></div>
+    <div id="zoneInfo" class="card">
+      <h2>🗺️ 区域资讯</h2>
+      <div class="storybox" id="zoneContent">点击地图上的区域，探索你的世界。</div>
+    </div>
 
+    <div class="section-label" style="padding-left:16px">🏠 我的家园</div>
     <div class="grid">
-      <div class="card" style="text-align:center"><div style="font-size:80px" id="mainHouse">🏚️</div><h2>我的房间</h2><p class="muted" id="houseDesc">继续成长来升级你的房间。</p></div>
-      <div class="card" style="text-align:center"><div style="font-size:80px" id="petEmoji">🥚</div><h2>成长宠物</h2><p class="muted" id="petDesc">坚持完成任务，宠物会慢慢进化。</p></div>
-    </div>
-
-    <div class="card"><h2>🛋️ 我的房间布置</h2><div class="room-grid" id="roomGrid"></div></div>
-    <div class="card"><h2>🛍️ 奖励商店</h2><div class="shop-grid" id="shopList"></div></div>
-  </main>
-
-  <main id="page-quests" class="page">
-    <div class="card"><h2>📜 今日成长任务</h2><p class="muted">任务现在不能随便点击完成。每个任务都有条件，完成相关行动后才可以领取奖励。</p></div>
-    <div class="quest-grid" id="questList"></div>
-  </main>
-
-  <main id="page-npc" class="page">
-    <div class="card"><h2>🧍 人际关系系统</h2><p class="muted">未来孩子最重要的能力之一，是人际判断与关系经营。</p></div>
-    <div class="npc-row" id="npcList"></div>
-    <div class="card">
-      <h2>💬 今日 NPC 事件</h2>
-      <div class="storybox" id="npcEvent"></div>
-      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn" data-npc-action="kind">🤝 帮助对方</button>
-        <button class="btn secondary" data-npc-action="boundary">🛡️ 保持界限</button>
-        <button class="btn green" data-npc-action="honest">💬 诚实沟通</button>
+      <div class="card" style="text-align:center">
+        <div style="font-size:64px;margin-bottom:8px" id="mainHouse">🏚️</div>
+        <h2 style="justify-content:center">我的房间</h2>
+        <p class="muted" id="houseDesc">继续成长来升级你的房间。</p>
       </div>
-      <div class="cooldown" id="npcCooldownText"></div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:64px;margin-bottom:8px" id="petEmoji">🥚</div>
+        <h2 style="justify-content:center">成长宠物</h2>
+        <p class="muted" id="petDesc">坚持完成任务，宠物会慢慢进化。</p>
+      </div>
     </div>
+
+    <div class="card">
+      <h2>🛋️ 我的房间布置</h2>
+      <div class="room-grid" id="roomGrid"></div>
+    </div>
+
+    <div class="card">
+      <h2>🛍️ 奖励商店</h2>
+      <div class="shop-grid" id="shopList"></div>
+    </div>
+
+    <div style="height:16px"></div>
   </main>
 
+  <!-- ── QUESTS PAGE ────────────────────────── -->
+  <main id="page-quests" class="page">
+
+    <!-- Hero banner with progress ring -->
+    <div class="quest-header">
+      <div class="quest-header-row">
+        <div>
+          <h2>📜 今日成长任务</h2>
+          <p class="subtitle">完成挑战，领取奖励，让城市更丰富！</p>
+        </div>
+        <div class="quest-progress-ring" id="questProgressRing">
+          <svg width="68" height="68" viewBox="0 0 68 68">
+            <circle class="ring-bg"   cx="34" cy="34" r="26"/>
+            <circle class="ring-fill" cx="34" cy="34" r="26" id="questRingFill"/>
+          </svg>
+          <div class="ring-label">
+            <span class="big" id="questDoneCount">0</span>
+            <span class="small">/ <span id="questTotalCount">4</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="streak-bar">
+        <span class="flames">🔥</span>
+        <span class="streak-text">连续 <span id="questStreakNum">0</span> 天完成任务</span>
+        <span class="streak-xp">+连击奖励</span>
+      </div>
+    </div>
+
+    <div class="quest-grid" id="questList"></div>
+    <div style="height:20px"></div>
+  </main>
+
+  <!-- ── NPC PAGE ───────────────────────────── -->
+  <main id="page-npc" class="page">
+
+    <!-- Header -->
+    <div class="npc-header">
+      <div style="position:relative;z-index:1">
+        <h2>🧍 人际关系</h2>
+        <p class="subtitle">你怎么回应他们，会影响关系、信任和你的判断力。</p>
+      </div>
+      <div class="npc-bond-row">
+        <span class="bond-label">💛 总关系值</span>
+        <div class="bond-track"><div class="bond-fill" id="totalBondFill" style="width:0%"></div></div>
+        <span class="bond-score" id="totalBondScore">0</span>
+      </div>
+    </div>
+
+    <!-- NPC portrait scroll -->
+    <div class="npc-row" id="npcList"></div>
+
+    <!-- Event scene card -->
+    <div class="npc-scene-card" id="npcSceneCard">
+      <!-- Top: active NPC portrait + mood — filled by JS -->
+      <div class="npc-scene-top" id="npcSceneTop">
+        <div class="npc-scene-avatar" id="npcSceneAvatar">🧑‍🤝‍🧑</div>
+        <div class="npc-scene-info">
+          <div class="npc-scene-name" id="npcSceneName">好朋友</div>
+          <div class="npc-scene-mood" id="npcSceneMood">😊 今天心情不错</div>
+        </div>
+      </div>
+
+      <!-- Speech / done bubble -->
+      <div id="npcEventWrap">
+        <div class="npc-speech" id="npcEvent">今天，好朋友希望你帮他一起完成一个挑战，但你其实已经很累了。你会怎么回应？</div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="npc-actions" id="npcActionArea">
+        <button class="npc-action-btn kind" data-npc-action="kind">
+          <span class="action-icon">🤝</span>
+          帮助对方
+          <span class="effect-hint">关系 +5 · 信任 +2</span>
+        </button>
+        <button class="npc-action-btn boundary" data-npc-action="boundary">
+          <span class="action-icon">🛡️</span>
+          保持界限
+          <span class="effect-hint">自信 +5 · 判断 +2</span>
+        </button>
+        <button class="npc-action-btn honest" data-npc-action="honest">
+          <span class="action-icon">💬</span>
+          诚实沟通
+          <span class="effect-hint">爸爸 +4 · 抗挫 +3</span>
+        </button>
+        <button class="npc-action-btn kind" style="background:linear-gradient(135deg,#F8F5FF,#EEE8FF);color:var(--violet);border-color:rgba(124,92,252,.2)" data-switch="mentor">
+          <span class="action-icon">🤖</span>
+          问问导师
+          <span class="effect-hint">获得AI建议</span>
+        </button>
+      </div>
+
+      <div class="cooldown" id="npcCooldownText" style="padding:0 14px 12px"></div>
+    </div>
+
+    <div style="height:20px"></div>
+  </main>
+
+  <!-- ── MENTOR PAGE ───────────────────────── -->
   <main id="page-mentor" class="page">
-    <div class="card"><h2>🤖 Koin AI 导师</h2><p class="muted">孩子不是看影片，而是被提问、被挑战、被引导思考。这里先用规则引擎模拟，之后可接 OpenAI API。</p></div>
+    <div style="height:16px"></div>
+    <div class="card">
+      <h2>🤖 Koin AI 导师</h2>
+      <p class="muted">Koin 导师会根据你的选择提出问题，帮助你想清楚：我为什么这样做？下次可以怎么做得更好？</p>
+    </div>
     <div class="card">
       <h2>今日引导问题</h2>
       <div class="storybox" id="mentorQuestion"></div>
@@ -150,32 +324,87 @@
       <textarea id="reflectionInput" rows="5" placeholder="写下你的想法：为什么你会这样选择？下次你会怎么做？"></textarea>
       <button class="btn green" style="margin-top:12px" id="reflectionBtn">提交反思，获得成长值</button>
     </div>
-    <div class="card"><h2>📝 反思记录</h2><div id="reflections"></div></div>
-  </main>
-
-  <main id="page-parent" class="page">
-    <div class="card"><h2>👨‍👩‍👧 家长成长可视化</h2><p class="muted">家长看到的不是成绩，而是孩子在"学校没有教，但未来必须会"的成长。</p></div>
-    <div class="grid"><div class="card"><h2>本月进步</h2><div id="growthReport"></div></div><div class="card"><h2>家长建议</h2><div id="parentAdvice" class="muted"></div></div></div>
-    <div class="card"><h2>可截图发给家长的总结</h2><div class="storybox" id="shareSummary"></div></div>
-  </main>
-
-  <main id="page-settings" class="page">
     <div class="card">
-      <h2>⚙️ 孩子设定</h2>
-      <div class="grid">
-        <div><label>孩子名字</label><input id="childName" placeholder="例如：Jayden" /></div>
-        <div><label>年龄</label><input id="childAge" type="number" placeholder="12" /></div>
-        <div><label>当前主题</label><select id="theme"><option value="money">金钱选择</option><option value="school">学校生活</option><option value="business">小小创业</option></select></div>
-      </div>
-      <button class="btn" style="margin-top:14px" id="saveSettingsBtn">保存设定</button>
-      <button class="btn secondary" style="margin-top:14px" id="resetBtn">重置 Demo 数据</button>
-      <button class="btn green" style="margin-top:14px" id="resetDailyBtn">刷新每日任务</button>
+      <h2>📝 反思记录</h2>
+      <div id="reflections"></div>
     </div>
-    <div class="card"><h2>🚀 上线说明</h2><p class="muted">这个版本是纯 HTML/CSS/JS，无需 backend。把文件命名为 <b>index.html</b>，放到 GitHub Repository，开启 GitHub Pages 就能上线。</p></div>
+    <div style="height:16px"></div>
   </main>
 
+  <!-- ── PARENT PAGE ───────────────────────── -->
+  <main id="page-parent" class="page">
+    <div style="height:16px"></div>
+    <div class="card">
+      <h2>👨‍👩‍👧 家长成长可视化</h2>
+      <p class="muted">这里记录的是成绩单以外的成长：自律、判断力、抗挫力、储蓄习惯和表达能力。</p>
+    </div>
+    <div class="parent-grid" style="padding:0 16px;gap:10px">
+      <div class="card"><h2>本月进步</h2><div id="growthReport"></div></div>
+      <div class="card"><h2>家长建议</h2><div id="parentAdvice" class="muted"></div></div>
+    </div>
+    <div class="card">
+      <h2>可截图发给家长的总结</h2>
+      <div class="storybox" id="shareSummary"></div>
+    </div>
+    <div style="height:16px"></div>
+  </main>
+
+  <!-- ── SETTINGS PAGE ─────────────────────── -->
+  <main id="page-settings" class="page">
+    <div style="height:16px"></div>
+    <div class="card">
+      <h2>⚙️ 玩家设定</h2>
+      <div style="display:grid;gap:12px">
+        <div><label>玩家名字</label><input id="childName" placeholder="例如：Jayden" /></div>
+        <div><label>年龄</label><input id="childAge" type="number" placeholder="12" /></div>
+        <div><label>成长主题</label>
+          <select id="theme">
+            <option value="money">金钱选择</option>
+            <option value="school">学校生活</option>
+            <option value="business">小小创业</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+        <button class="btn" id="saveSettingsBtn">保存设定</button>
+        <button class="btn secondary" id="resetBtn">重新开始游戏</button>
+        <button class="btn green" id="resetDailyBtn">刷新今日任务</button>
+      </div>
+    </div>
+    <div style="height:16px"></div>
+  </main>
+
+  <!-- ── BOTTOM NAV ─────────────────────────── -->
+  <nav class="nav" id="mainNav">
+    <button class="active" data-page="home">
+      <span class="nav-icon">🌎</span>我的世界
+    </button>
+    <button data-page="story">
+      <span class="nav-icon">🎮</span>人生事件
+    </button>
+    <button data-page="city">
+      <span class="nav-icon">🏙️</span>城市
+    </button>
+    <button data-page="quests">
+      <span class="nav-icon">📜</span>任务
+    </button>
+    <button data-page="npc">
+      <span class="nav-icon">🧍</span>NPC
+    </button>
+    <button data-page="mentor">
+      <span class="nav-icon">🤖</span>导师
+    </button>
+    <button data-page="parent">
+      <span class="nav-icon">👨‍👩‍👧</span>家长
+    </button>
+    <button data-page="settings">
+      <span class="nav-icon">⚙️</span>设定
+    </button>
+  </nav>
+
+  <!-- Random event popup container -->
   <div id="randomEvent"></div>
-  <div class="footer-note">MVP 版本：纯前端 localStorage 保存 · 可直接部署到 GitHub Pages / Netlify / Vercel</div>
+
 </div>
 
 <script src="js/data.js"></script>
