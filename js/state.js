@@ -43,6 +43,10 @@ const defaultState = {
   npcEventDone: false,
   npcEventDate: null,
 
+  dailyLocationDate: null,
+  dailyLocationActions: 0,
+  locationHistory: [],
+
   tutorial: {
     completed: false,
     step: 0,
