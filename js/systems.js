@@ -1,5 +1,3 @@
-// Systems for Koin City MVP
-// This file contains game systems and logic
 function clamp(v) {
   return Math.max(0, Math.min(100, Math.round(v)));
 }
@@ -16,13 +14,18 @@ function addReward(coins, xp) {
     state.level += 1;
     state.xp -= 100;
     state.coins += 60;
-    createCoinBurst('✨ LEVEL UP!');
+
+    if (typeof createCoinBurst === 'function') {
+      createCoinBurst('✨ LEVEL UP!');
+    }
   }
 }
 
 function applyChoice(i) {
   const scene = currentScene();
   const choice = scene.choices[i];
+
+  if (!choice) return;
 
   Object.entries(choice.effect).forEach(([k, v]) => {
     state.stats[k] = clamp((state.stats[k] || 50) + v);
@@ -32,8 +35,13 @@ function applyChoice(i) {
   const earnedXp = Math.floor(Math.random() * 15) + 12;
 
   addReward(earnedCoins, earnedXp);
+
   state.energy = Math.max(0, state.energy - 8);
   state.streak += 1;
+
+  if (!state.questProgress) {
+    state.questProgress = {};
+  }
 
   if (choice.effect.impulse && choice.effect.impulse < 0) {
     state.questProgress.storyPositive = true;
@@ -43,7 +51,7 @@ function applyChoice(i) {
     state.questProgress.savingChoice = true;
   }
 
-  if (['平衡选择', '投资学习', '复盘能力', '解决问题'].includes(choice.tag)) {
+  if (['平衡选择', '投资学习', '复盘能力', '解决问题', '有界限的善良', '市场判断', '寻找支持'].includes(choice.tag)) {
     state.questProgress.storyPositive = true;
   }
 
@@ -60,6 +68,8 @@ function applyChoice(i) {
   state.day += 1;
 
   createCoinBurst(`+${earnedCoins} 🪙`);
+  showToast('人生选择已记录 ✨');
+
   save();
   render();
 }
@@ -102,7 +112,14 @@ function mentorQuestion() {
 }
 
 function saveReflection() {
-  const txt = $('reflectionInput').value.trim();
+  const input = $('reflectionInput');
+
+  if (!input) {
+    alert('找不到反思输入框，请确认 mentor 页面结构没有被删除。');
+    return;
+  }
+
+  const txt = input.value.trim();
 
   if (!txt) {
     alert('先写下你的想法，再提交哦。');
@@ -112,6 +129,10 @@ function saveReflection() {
   if (txt.length < 20) {
     alert('反思太短了，至少写 20 个字，才算真正有思考。');
     return;
+  }
+
+  if (!state.questProgress) {
+    state.questProgress = {};
   }
 
   state.questProgress.reflection = true;
@@ -131,7 +152,7 @@ function saveReflection() {
     state.completedQuests.push('q2');
   }
 
-  $('reflectionInput').value = '';
+  input.value = '';
 
   createCoinBurst('+25 🪙');
   showToast('反思完成，成长值提升 🧠');
@@ -141,6 +162,7 @@ function saveReflection() {
 }
 
 function canClaimQuest(quest) {
+  if (!quest || !state.questProgress) return false;
   return !!state.questProgress[quest.type];
 }
 
@@ -148,7 +170,11 @@ function completeQuest(id, reward) {
   const quest = dailyQuests.find(q => q.id === id);
 
   if (!quest) return;
-  if (state.completedQuests.includes(id)) return;
+
+  if (state.completedQuests.includes(id)) {
+    showToast('这个任务已经领取过了 ✅');
+    return;
+  }
 
   if (!canClaimQuest(quest)) {
     alert('还不能领取奖励：\n\n' + quest.requirement);
@@ -156,6 +182,7 @@ function completeQuest(id, reward) {
   }
 
   state.completedQuests.push(id);
+
   addReward(reward, 15);
   state.energy = Math.min(100, state.energy + 10);
 
@@ -196,9 +223,14 @@ function npcAction(type) {
     return;
   }
 
+  if (!state.questProgress) {
+    state.questProgress = {};
+  }
+
   const gain = Math.floor(Math.random() * 10) + 5;
 
   addReward(gain, 8);
+
   state.stats.judgment = clamp(state.stats.judgment + 2);
 
   if (type === 'kind') {
@@ -219,17 +251,24 @@ function npcAction(type) {
   state.npcEventDone = true;
 
   createCoinBurst(`+${gain} 🪙`);
+  showToast('关系事件已完成 💛');
+
   save();
   render();
 }
 
 function saveSettings() {
-  state.childName = $('childName').value || '孩子';
-  state.childAge = parseInt($('childAge').value, 10) || 12;
-  state.theme = $('theme').value;
+  const childNameInput = $('childName');
+  const childAgeInput = $('childAge');
+  const themeInput = $('theme');
+
+  state.childName = childNameInput ? childNameInput.value || '孩子' : state.childName;
+  state.childAge = childAgeInput ? parseInt(childAgeInput.value, 10) || 12 : state.childAge;
+  state.theme = themeInput ? themeInput.value : state.theme;
 
   save();
   render();
+
   alert('已保存');
 }
 
