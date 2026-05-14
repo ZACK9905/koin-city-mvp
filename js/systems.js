@@ -3,7 +3,6 @@ function clamp(v) {
   return Math.max(0, Math.min(100, Math.round(v)));
 }
 
-// Keep date helpers here too, so systems.js is safe even if state.js is cached.
 function getTodayKey() {
   const now = new Date();
   const year = now.getFullYear();
@@ -25,26 +24,35 @@ function ensureDailyStateFields() {
   if (!state.completedQuests) state.completedQuests = [];
   if (!state.questProgress) state.questProgress = {};
   if (!state.inventory) state.inventory = [];
-  if (!state.roomItems) state.roomItems = [];
   if (!state.history) state.history = [];
   if (!state.reflections) state.reflections = [];
+
+  if (!state.tutorial) {
+    state.tutorial = {
+      completed: false,
+      step: 0,
+      awaiting: null,
+      starterClaimed: false,
+      petEggClaimed: false
+    };
+  }
+
+  if (!state.pet) {
+    state.pet = {
+      species: null,
+      stage: 'none',
+      xp: 0,
+      mood: 70,
+      eggOwned: false
+    };
+  }
+
   if (!state.npcHearts) {
     state.npcHearts = { dad: 55, friend: 68, mentor: 35, merchant: 20 };
   }
 
-  if (typeof state.streak !== 'number') state.streak = 0;
-  if (typeof state.energy !== 'number') state.energy = 100;
-  if (typeof state.day !== 'number') state.day = 1;
-
-  if (typeof state.lastVisitDate === 'undefined') state.lastVisitDate = null;
-  if (typeof state.lastEventDate === 'undefined') state.lastEventDate = null;
-  if (typeof state.lastReflectionDate === 'undefined') state.lastReflectionDate = null;
-  if (typeof state.dailyLoginClaimedDate === 'undefined') state.dailyLoginClaimedDate = null;
-  if (typeof state.npcEventDate === 'undefined') state.npcEventDate = null;
-  if (typeof state.npcEventDone === 'undefined') state.npcEventDone = false;
-
   if (!state.stats) state.stats = {};
-  const defaultStats = {
+  const statDefaults = {
     discipline: 50,
     saving: 50,
     judgment: 50,
@@ -60,28 +68,22 @@ function ensureDailyStateFields() {
     emotion: 0
   };
 
-  Object.keys(defaultStats).forEach(k => {
-    if (typeof state.stats[k] !== 'number') state.stats[k] = defaultStats[k];
+  Object.entries(statDefaults).forEach(([key, value]) => {
+    if (typeof state.stats[key] !== 'number') {
+      state.stats[key] = value;
+    }
   });
 
-  if (!state.tutorial) {
-    state.tutorial = {
-      completed: false,
-      step: 0,
-      starterClaimed: false,
-      petEggClaimed: false
-    };
-  }
+  if (typeof state.streak !== 'number') state.streak = 0;
+  if (typeof state.energy !== 'number') state.energy = 100;
+  if (typeof state.day !== 'number') state.day = 1;
 
-  if (typeof state.tutorial.completed !== 'boolean') state.tutorial.completed = false;
-  if (typeof state.tutorial.step !== 'number') state.tutorial.step = 0;
-  if (typeof state.tutorial.starterClaimed !== 'boolean') state.tutorial.starterClaimed = false;
-  if (typeof state.tutorial.petEggClaimed !== 'boolean') state.tutorial.petEggClaimed = false;
-
-  if (typeof state.petEggOwned !== 'boolean') state.petEggOwned = false;
-  if (typeof state.petStage !== 'number') state.petStage = 0;
-  if (typeof state.petExp !== 'number') state.petExp = 0;
-  if (typeof state.petMood !== 'string') state.petMood = state.petStage > 0 ? '开心' : '期待孵化';
+  if (typeof state.lastVisitDate === 'undefined') state.lastVisitDate = null;
+  if (typeof state.lastEventDate === 'undefined') state.lastEventDate = null;
+  if (typeof state.lastReflectionDate === 'undefined') state.lastReflectionDate = null;
+  if (typeof state.dailyLoginClaimedDate === 'undefined') state.dailyLoginClaimedDate = null;
+  if (typeof state.npcEventDate === 'undefined') state.npcEventDate = null;
+  if (typeof state.npcEventDone === 'undefined') state.npcEventDone = false;
 }
 
 function currentScene() {
@@ -123,26 +125,20 @@ function dailySync() {
 
     state.lastVisitDate = today;
 
-    // Reset daily content
     state.completedQuests = [];
     state.questProgress = {};
     state.npcEventDone = false;
     state.npcEventDate = null;
     state.energy = Math.min(100, (state.energy || 0) + 35);
 
-    // Daily login reward
     if (state.dailyLoginClaimedDate !== today) {
       const loginBonus = 20 + Math.min(state.streak, 7) * 5;
       state.coins += loginBonus;
       state.dailyLoginClaimedDate = today;
 
       setTimeout(() => {
-        if (typeof showToast === 'function') {
-          showToast(`每日签到奖励 +${loginBonus} 🪙`);
-        }
-        if (typeof createCoinBurst === 'function') {
-          createCoinBurst(`+${loginBonus} 🪙`);
-        }
+        if (typeof showToast === 'function') showToast(`每日登录奖励 +${loginBonus} 🪙`);
+        if (typeof createCoinBurst === 'function') createCoinBurst(`+${loginBonus} 🪙`);
       }, 500);
     }
 
@@ -151,139 +147,162 @@ function dailySync() {
 }
 
 // ---------- Tutorial System ----------
-function isTutorialActive() {
+function tutorialIsActive() {
   ensureDailyStateFields();
   return !state.tutorial.completed;
 }
 
-function setTutorialStep(step) {
-  ensureDailyStateFields();
-  state.tutorial.step = step;
-  save();
-  render();
-}
-
-function advanceTutorial() {
-  ensureDailyStateFields();
-
-  if (state.tutorial.completed) return;
-
-  state.tutorial.step += 1;
-
-  if (state.tutorial.step >= 7) {
-    state.tutorial.completed = true;
-    showToast('新手引导完成！欢迎正式开始 Koin City 🌱');
-  }
-
-  save();
-  render();
-}
-
-function claimStarterFund() {
+function claimStarterPack() {
   ensureDailyStateFields();
 
   if (state.tutorial.starterClaimed) {
-    showToast('起始成长基金已经领取过了 ✅');
-    advanceTutorial();
     return;
   }
 
   state.coins += 500;
+  state.inventory.push('starterDesk');
   state.tutorial.starterClaimed = true;
 
-  if (!state.inventory.includes('starter-desk')) {
-    state.inventory.push('starter-desk');
-  }
-
-  if (!state.roomItems.includes('starter-desk')) {
-    state.roomItems.push('starter-desk');
-  }
-
-  state.petEggOwned = true;
-  state.tutorial.petEggClaimed = true;
-
   createCoinBurst('+500 🪙');
-  showToast('获得 RM500 起始成长基金 + 普通书桌 + 宠物蛋 🎁');
+  showToast('获得 RM500 起始成长基金 🎁');
 
-  state.tutorial.step = 2;
   save();
-  render();
 }
 
-function hatchStarterPet() {
+function claimTutorialPetEgg() {
   ensureDailyStateFields();
 
-  if (!state.petEggOwned) {
-    state.petEggOwned = true;
+  if (state.tutorial.petEggClaimed) {
+    return;
   }
 
-  if (state.petStage === 0) {
-    state.petStage = 1;
-    state.petType = state.petType || 'hamster';
-    state.petName = state.petName || 'NutNut';
-    state.petMood = '刚孵化，很好奇';
-    state.petExp += 10;
-  }
+  state.pet.eggOwned = true;
+  state.pet.stage = 'egg';
+  state.pet.species = 'mystery';
+  state.tutorial.petEggClaimed = true;
 
-  state.tutorial.completed = true;
-  state.tutorial.step = 7;
+  createCoinBurst('🥚');
+  showToast('获得普通宠物蛋！明天继续照顾它 🥚');
 
-  createCoinBurst('🐹 孵化成功');
-  showToast('宠物伙伴加入了你的成长旅程！');
+  save();
+}
 
+function goTutorialStep(step) {
+  ensureDailyStateFields();
+  state.tutorial.step = step;
+  state.tutorial.awaiting = null;
   save();
   render();
 }
 
-function handleTutorialAction(action) {
-  if (action === 'start') {
-    setTutorialStep(1);
+function tutorialPrimaryAction() {
+  ensureDailyStateFields();
+
+  const step = state.tutorial.step;
+
+  if (step === 0) {
+    state.tutorial.step = 1;
+    save();
+    render();
     return;
   }
 
-  if (action === 'claim-starter') {
-    claimStarterFund();
-    return;
-  }
-
-  if (action === 'go-story') {
+  if (step === 1) {
+    claimStarterPack();
+    state.tutorial.step = 2;
+    state.tutorial.awaiting = 'lifeEvent';
+    save();
     switchPage('story');
     return;
   }
 
-  if (action === 'go-quests') {
+  if (step === 2) {
+    state.tutorial.awaiting = 'lifeEvent';
+    save();
+    switchPage('story');
+    return;
+  }
+
+  if (step === 3) {
+    state.tutorial.awaiting = 'quest';
+    save();
     switchPage('quests');
     return;
   }
 
-  if (action === 'go-shop') {
+  if (step === 4) {
+    state.tutorial.awaiting = 'shop';
+    save();
     switchPage('city');
     setTimeout(() => {
-      const shop = document.getElementById('shopList');
-      if (shop) shop.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const shopList = document.getElementById('shopList');
+      if (shopList) shopList.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 250);
     return;
   }
 
-  if (action === 'go-report') {
+  if (step === 5) {
+    state.tutorial.step = 6;
+    state.tutorial.awaiting = null;
+    save();
     switchPage('parent');
-    if (state.tutorial.step === 5) {
-      state.tutorial.step = 6;
-      save();
-      render();
-    }
     return;
   }
 
-  if (action === 'hatch-pet') {
-    hatchStarterPet();
+  if (step === 6) {
+    claimTutorialPetEgg();
+    state.tutorial.step = 7;
+    state.tutorial.awaiting = null;
+    save();
+    render();
+    return;
+  }
+
+  if (step === 7) {
+    state.tutorial.completed = true;
+    state.tutorial.awaiting = null;
+    state.inventory.push('starterBadge');
+    addReward(30, 20);
+    showToast('新手引导完成！获得成长新手称号 🌟');
+    save();
+    render();
+  }
+}
+
+function tutorialActionCompleted(type) {
+  ensureDailyStateFields();
+
+  if (state.tutorial.completed) return;
+
+  if (type === 'lifeEvent' && state.tutorial.step <= 2) {
+    state.tutorial.step = 3;
+    state.tutorial.awaiting = null;
+    showToast('很好！现在去领取第一个任务奖励 📜');
+    save();
+    render();
+    return;
+  }
+
+  if (type === 'quest' && state.tutorial.step <= 3) {
+    state.tutorial.step = 4;
+    state.tutorial.awaiting = null;
+    showToast('奖励领取成功！现在去买第一个家具 🛋️');
+    save();
+    render();
+    return;
+  }
+
+  if (type === 'shop' && state.tutorial.step <= 4) {
+    state.tutorial.step = 5;
+    state.tutorial.awaiting = null;
+    showToast('家具购买成功！去看看成长报告 👨‍👩‍👧');
+    save();
+    render();
   }
 }
 
 // ---------- Reward / Progression ----------
 function addReward(coins, xp) {
-  ensureDailyStateFields();
-
   state.coins += coins;
   state.xp += xp;
 
@@ -291,21 +310,8 @@ function addReward(coins, xp) {
     state.level += 1;
     state.xp -= 100;
     state.coins += 60;
-
-    if (typeof createCoinBurst === 'function') {
-      createCoinBurst('✨ LEVEL UP!');
-    }
+    if (typeof createCoinBurst === 'function') createCoinBurst('✨ LEVEL UP!');
   }
-}
-
-function applyFurnitureBuff(baseValue, statName) {
-  let multiplier = 1;
-
-  if (statName === 'knowledge' && state.inventory.includes('starter-desk')) {
-    multiplier += 0.05;
-  }
-
-  return Math.round(baseValue * multiplier);
 }
 
 // ---------- Life Event ----------
@@ -331,29 +337,19 @@ function applyChoice(i) {
     state.stats[k] = clamp((state.stats[k] || 50) + v);
   });
 
-  // Tutorial first school/story event adds early knowledge.
-  if (isTutorialActive() && state.tutorial.step === 2) {
-    state.stats.knowledge = clamp((state.stats.knowledge || 0) + 8);
-  }
+  state.stats.knowledge = clamp((state.stats.knowledge || 0) + 4);
+  state.stats.emotion = clamp((state.stats.emotion || 0) + 2);
 
-  const earnedCoins = Math.floor(Math.random() * 20) + 18 + (isTutorialActive() ? 50 : 0);
+  const earnedCoins = Math.floor(Math.random() * 20) + 18;
   const earnedXp = Math.floor(Math.random() * 15) + 12;
 
   addReward(earnedCoins, earnedXp);
-
   state.energy = Math.max(0, state.energy - 10);
 
-  if (!state.questProgress) {
-    state.questProgress = {};
-  }
+  if (!state.questProgress) state.questProgress = {};
 
-  if (choice.effect.impulse && choice.effect.impulse < 0) {
-    state.questProgress.storyPositive = true;
-  }
-
-  if (choice.effect.saving && choice.effect.saving > 0) {
-    state.questProgress.savingChoice = true;
-  }
+  if (choice.effect.impulse && choice.effect.impulse < 0) state.questProgress.storyPositive = true;
+  if (choice.effect.saving && choice.effect.saving > 0) state.questProgress.savingChoice = true;
 
   if (['平衡选择', '投资学习', '复盘能力', '解决问题', '有界限的善良', '市场判断', '寻找支持'].includes(choice.tag)) {
     state.questProgress.storyPositive = true;
@@ -372,14 +368,11 @@ function applyChoice(i) {
   state.lastEventDate = getTodayKey();
   state.day += 1;
 
-  if (isTutorialActive() && state.tutorial.step === 2) {
-    state.tutorial.step = 3;
-  }
-
   createCoinBurst(`+${earnedCoins} 🪙`);
-  showToast(isTutorialActive() ? '第一个人生事件完成！去领取任务奖励吧 ✨' : '今日人生事件完成 ✨ 明天回来继续成长');
+  showToast('今日人生事件完成 ✨ 明天回来继续成长');
 
   save();
+  tutorialActionCompleted('lifeEvent');
   render();
 }
 
@@ -395,8 +388,6 @@ function analyzeTraits() {
   if (s.goal < 50) arr.push('目标感需要加强');
   if (s.judgment > 62) arr.push('判断力正在提升');
   if (s.saving > 62) arr.push('储蓄稳定');
-  if (s.knowledge >= 20) arr.push('知识成长中');
-  if (s.business >= 20) arr.push('商业潜力出现');
 
   return arr.length ? arr : ['成长状态稳定'];
 }
@@ -450,9 +441,7 @@ function saveReflection() {
     return;
   }
 
-  if (!state.questProgress) {
-    state.questProgress = {};
-  }
+  if (!state.questProgress) state.questProgress = {};
 
   state.questProgress.reflection = true;
   state.lastReflectionDate = getTodayKey();
@@ -465,18 +454,16 @@ function saveReflection() {
 
   state.stats.discipline = clamp(state.stats.discipline + 3);
   state.stats.resilience = clamp(state.stats.resilience + 3);
-  state.petExp += 8;
+  state.stats.emotion = clamp((state.stats.emotion || 0) + 3);
 
   addReward(25, 18);
 
-  if (!state.completedQuests.includes('q2')) {
-    state.completedQuests.push('q2');
-  }
+  if (!state.completedQuests.includes('q2')) state.completedQuests.push('q2');
 
   input.value = '';
 
   createCoinBurst('+25 🪙');
-  showToast('今日反思完成，宠物也更了解你了 🧠');
+  showToast('今日反思完成，成长值提升 🧠');
 
   save();
   render();
@@ -510,14 +497,11 @@ function completeQuest(id, reward) {
   addReward(reward, 15);
   state.energy = Math.min(100, state.energy + 10);
 
-  if (isTutorialActive() && state.tutorial.step === 3) {
-    state.tutorial.step = 4;
-  }
-
   createCoinBurst(`+${reward} 🪙`);
-  showToast(isTutorialActive() ? '第一次任务奖励已领取！现在去买家具吧 🎁' : '任务奖励已领取 🎁');
+  showToast('任务奖励已领取 🎁');
 
   save();
+  tutorialActionCompleted('quest');
   render();
 }
 
@@ -531,27 +515,17 @@ function buyItem(type, cost) {
   state.coins -= cost;
   state.inventory.push(type);
 
-  if (type === 'pet') {
-    state.petStage = Math.max(state.petStage, 1);
-  }
+  if (type === 'pet') state.petStage = Math.max(state.petStage, 1);
+  if (type === 'house') state.houseLevel = Math.min(3, state.houseLevel + 1);
 
-  if (type === 'house') {
-    state.houseLevel = Math.min(3, state.houseLevel + 1);
-  }
-
-  if (!state.roomItems) state.roomItems = [];
-  if (!['house', 'pet'].includes(type)) {
-    state.roomItems.push(type);
-  }
-
-  if (isTutorialActive() && state.tutorial.step === 4) {
-    state.tutorial.step = 5;
-  }
+  if (type === 'lamp') state.stats.knowledge = clamp((state.stats.knowledge || 0) + 2);
+  if (type === 'tree') state.stats.emotion = clamp((state.stats.emotion || 0) + 2);
 
   createCoinBurst(`-${cost} 🪙`);
-  showToast(isTutorialActive() ? '家具买好了！去看看成长报告吧 ✨' : '购买成功！你的城市变丰富了 ✨');
+  showToast('购买成功！你的城市变丰富了 ✨');
 
   save();
+  tutorialActionCompleted('shop');
   render();
 }
 
@@ -569,9 +543,7 @@ function npcAction(type) {
     return;
   }
 
-  if (!state.questProgress) {
-    state.questProgress = {};
-  }
+  if (!state.questProgress) state.questProgress = {};
 
   const gain = Math.floor(Math.random() * 10) + 5;
 
@@ -579,10 +551,9 @@ function npcAction(type) {
 
   state.energy = Math.max(0, state.energy - 5);
   state.stats.judgment = clamp(state.stats.judgment + 2);
+  state.stats.social = clamp((state.stats.social || 0) + 3);
 
-  if (type === 'kind') {
-    state.npcHearts.friend = clamp(state.npcHearts.friend + 5);
-  }
+  if (type === 'kind') state.npcHearts.friend = clamp(state.npcHearts.friend + 5);
 
   if (type === 'boundary') {
     state.stats.confidence = clamp(state.stats.confidence + 5);
@@ -630,9 +601,7 @@ function resetGame() {
 }
 
 function resetDailyDemo() {
-  if (!confirm('确定要刷新今日任务和 NPC 事件吗？')) {
-    return;
-  }
+  if (!confirm('确定要刷新今日任务和 NPC 事件吗？')) return;
 
   state.completedQuests = [];
   state.questProgress = {};
