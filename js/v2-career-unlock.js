@@ -1,6 +1,6 @@
-// Koin City V2 — Career Unlock Patch v1
-// Upload as js/v2-career-unlock.js
-// Load AFTER js/v2-location-growth.js in index.html.
+// Koin City V2 — Career Unlock Patch v2 SAFE
+// Replace existing js/v2-career-unlock.js with this file.
+// Load AFTER js/v2-location-growth.js.
 
 (function () {
   function $safe(id) {
@@ -20,12 +20,8 @@
     if (typeof save === 'function') save();
   }
 
-  function clamp(v) {
-    return Math.max(0, Math.min(100, Math.round(v)));
-  }
-
   function ensureCareerState() {
-    if (!window.state) return;
+    if (!window.state) return false;
 
     if (!state.stats) state.stats = {};
     const statDefaults = {
@@ -43,19 +39,28 @@
     };
 
     Object.entries(statDefaults).forEach(([key, value]) => {
-      if (typeof state.stats[key] !== 'number') state.stats[key] = value;
+      if (typeof state.stats[key] !== 'number') {
+        state.stats[key] = value;
+      }
     });
 
-    if (!state.careers) {
-      state.careers = {
-        selected: null,
-        unlocked: [],
-        claimedRewards: []
-      };
+    if (!state.careers || typeof state.careers !== 'object' || Array.isArray(state.careers)) {
+      state.careers = {};
     }
 
-    if (!Array.isArray(state.careers.unlocked)) state.careers.unlocked = [];
-    if (!Array.isArray(state.careers.claimedRewards)) state.careers.claimedRewards = [];
+    if (typeof state.careers.selected !== 'string' && state.careers.selected !== null) {
+      state.careers.selected = null;
+    }
+
+    if (!Array.isArray(state.careers.unlocked)) {
+      state.careers.unlocked = [];
+    }
+
+    if (!Array.isArray(state.careers.claimedRewards)) {
+      state.careers.claimedRewards = [];
+    }
+
+    return true;
   }
 
   function statLabel(key) {
@@ -82,232 +87,68 @@
     const style = document.createElement('style');
     style.id = 'koinCareerPatchStyles';
     style.textContent = `
-      .koin-career-hub{
-        margin:14px 16px;
-      }
-
+      .koin-career-hub{margin:14px 16px}
       .koin-career-hero{
         background:linear-gradient(145deg,#1A1034,#4F46E5 55%,#FF8C42);
-        color:#fff;
-        border-radius:26px;
-        padding:18px;
+        color:#fff;border-radius:26px;padding:18px;
         box-shadow:0 16px 42px rgba(79,70,229,.22);
-        position:relative;
-        overflow:hidden;
+        position:relative;overflow:hidden;
       }
-
       .koin-career-hero::after{
-        content:"";
-        position:absolute;
-        width:180px;
-        height:180px;
-        right:-80px;
-        top:-80px;
-        background:rgba(255,255,255,.16);
-        border-radius:50%;
+        content:"";position:absolute;width:180px;height:180px;right:-80px;top:-80px;
+        background:rgba(255,255,255,.16);border-radius:50%;
       }
-
-      .koin-career-hero h2{
-        margin:0 0 8px;
-        color:#fff;
-        position:relative;
-        z-index:1;
-      }
-
-      .koin-career-hero p{
-        color:rgba(255,255,255,.86);
-        font-size:13px;
-        line-height:1.6;
-        position:relative;
-        z-index:1;
-      }
-
+      .koin-career-hero h2{margin:0 0 8px;color:#fff;position:relative;z-index:1}
+      .koin-career-hero p{color:rgba(255,255,255,.86);font-size:13px;line-height:1.6;position:relative;z-index:1}
       .koin-career-summary{
-        display:grid;
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:8px;
-        margin-top:14px;
-        position:relative;
-        z-index:1;
+        display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px;position:relative;z-index:1;
       }
-
       .koin-career-summary .box{
-        background:rgba(255,255,255,.16);
-        border:1px solid rgba(255,255,255,.24);
-        border-radius:16px;
-        padding:10px;
-        text-align:center;
-        backdrop-filter:blur(8px);
+        background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);
+        border-radius:16px;padding:10px;text-align:center;backdrop-filter:blur(8px);
       }
-
-      .koin-career-summary .num{
-        display:block;
-        font-size:20px;
-        font-weight:1000;
-        line-height:1;
-      }
-
-      .koin-career-summary .label{
-        display:block;
-        margin-top:4px;
-        font-size:10px;
-        color:rgba(255,255,255,.8);
-        font-weight:800;
-      }
-
-      .koin-career-list{
-        display:grid;
-        grid-template-columns:1fr;
-        gap:12px;
-        margin-top:14px;
-      }
-
+      .koin-career-summary .num{display:block;font-size:20px;font-weight:1000;line-height:1}
+      .koin-career-summary .label{display:block;margin-top:4px;font-size:10px;color:rgba(255,255,255,.8);font-weight:800}
+      .koin-career-list{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px}
       .koin-career-card{
-        background:#fff;
-        border-radius:22px;
-        border:1.5px solid rgba(124,92,252,.14);
-        box-shadow:0 8px 24px rgba(124,92,252,.10);
-        padding:15px;
-        overflow:hidden;
+        background:#fff;border-radius:22px;border:1.5px solid rgba(124,92,252,.14);
+        box-shadow:0 8px 24px rgba(124,92,252,.10);padding:15px;overflow:hidden;
       }
-
-      .koin-career-card.unlocked{
-        border-color:rgba(114,225,40,.42);
-        background:linear-gradient(145deg,#fff,#f4fff0);
-      }
-
-      .koin-career-card.selected{
-        outline:3px solid rgba(255,140,66,.28);
-      }
-
-      .koin-career-head{
-        display:flex;
-        gap:12px;
-        align-items:flex-start;
-      }
-
+      .koin-career-card.unlocked{border-color:rgba(114,225,40,.42);background:linear-gradient(145deg,#fff,#f4fff0)}
+      .koin-career-card.selected{outline:3px solid rgba(255,140,66,.28)}
+      .koin-career-head{display:flex;gap:12px;align-items:flex-start}
       .koin-career-icon{
-        width:50px;
-        height:50px;
-        border-radius:18px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        background:rgba(124,92,252,.10);
-        font-size:28px;
-        flex-shrink:0;
+        width:50px;height:50px;border-radius:18px;display:flex;align-items:center;justify-content:center;
+        background:rgba(124,92,252,.10);font-size:28px;flex-shrink:0;
       }
-
-      .koin-career-title{
-        font-weight:1000;
-        font-size:16px;
-        margin-bottom:4px;
-      }
-
-      .koin-career-benefit{
-        color:var(--muted,#756e83);
-        font-size:12px;
-        line-height:1.45;
-      }
-
-      .koin-career-progress{
-        margin-top:12px;
-        display:grid;
-        gap:8px;
-      }
-
+      .koin-career-title{font-weight:1000;font-size:16px;margin-bottom:4px}
+      .koin-career-benefit{color:var(--muted,#756e83);font-size:12px;line-height:1.45}
+      .koin-career-progress{margin-top:12px;display:grid;gap:8px}
       .koin-career-req{
-        background:rgba(124,92,252,.05);
-        border-radius:14px;
-        padding:9px 10px;
-        border:1px solid rgba(124,92,252,.08);
+        background:rgba(124,92,252,.05);border-radius:14px;padding:9px 10px;border:1px solid rgba(124,92,252,.08);
       }
-
-      .koin-career-req-top{
-        display:flex;
-        justify-content:space-between;
-        gap:8px;
-        font-size:12px;
-        font-weight:900;
-        margin-bottom:6px;
-      }
-
-      .koin-career-track{
-        height:8px;
-        border-radius:999px;
-        background:rgba(0,0,0,.08);
-        overflow:hidden;
-      }
-
-      .koin-career-fill{
-        height:100%;
-        border-radius:999px;
-        background:linear-gradient(90deg,#7C5CFC,#FF8C42);
-      }
-
-      .koin-career-card.unlocked .koin-career-fill{
-        background:linear-gradient(90deg,#72E128,#06C8A8);
-      }
-
-      .koin-career-actions{
-        display:flex;
-        flex-wrap:wrap;
-        gap:8px;
-        margin-top:12px;
-      }
-
+      .koin-career-req-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:900;margin-bottom:6px}
+      .koin-career-track{height:8px;border-radius:999px;background:rgba(0,0,0,.08);overflow:hidden}
+      .koin-career-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#7C5CFC,#FF8C42)}
+      .koin-career-card.unlocked .koin-career-fill{background:linear-gradient(90deg,#72E128,#06C8A8)}
+      .koin-career-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
       .koin-career-status{
-        margin-top:10px;
-        border-radius:14px;
-        padding:9px 10px;
-        font-size:12px;
-        font-weight:900;
-        background:rgba(124,92,252,.08);
-        color:#5d4ae8;
+        margin-top:10px;border-radius:14px;padding:9px 10px;font-size:12px;font-weight:900;
+        background:rgba(124,92,252,.08);color:#5d4ae8;
       }
-
-      .koin-career-status.unlocked{
-        background:rgba(114,225,40,.16);
-        color:#2d6a19;
-      }
-
-      .koin-career-suggest{
-        margin-top:10px;
-        font-size:12px;
-        color:var(--muted,#756e83);
-        line-height:1.5;
-      }
-
+      .koin-career-status.unlocked{background:rgba(114,225,40,.16);color:#2d6a19}
+      .koin-career-suggest{margin-top:10px;font-size:12px;color:var(--muted,#756e83);line-height:1.5}
       .koin-career-panel{
-        background:#fff;
-        border-radius:22px;
-        border:1.5px solid rgba(124,92,252,.12);
-        padding:15px;
-        box-shadow:0 8px 24px rgba(124,92,252,.08);
-        margin-top:14px;
+        background:#fff;border-radius:22px;border:1.5px solid rgba(124,92,252,.12);
+        padding:15px;box-shadow:0 8px 24px rgba(124,92,252,.08);margin-top:14px;
       }
-
       .koin-career-mini-link{
-        margin-top:12px;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:10px;
-        border-radius:18px;
-        border:1.5px solid rgba(124,92,252,.14);
-        background:linear-gradient(145deg,#fff,#f7f3ff);
-        padding:12px 14px;
-        cursor:pointer;
+        margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+        border-radius:18px;border:1.5px solid rgba(124,92,252,.14);
+        background:linear-gradient(145deg,#fff,#f7f3ff);padding:12px 14px;cursor:pointer;
       }
-
-      .koin-career-mini-link strong{
-        font-size:14px;
-      }
-
-      .koin-career-mini-link span{
-        font-size:12px;
-        color:var(--muted,#756e83);
-      }
+      .koin-career-mini-link strong{font-size:14px}
+      .koin-career-mini-link span{font-size:12px;color:var(--muted,#756e83)}
     `;
     document.head.appendChild(style);
   }
@@ -320,7 +161,6 @@
       requirements: { discipline: 80, fitness: 70 },
       benefit: '解锁运动挑战、健康类收入与活力加成。',
       income: 220,
-      focus: ['gym', 'park'],
       suggested: '建议多去健身房提升活力，也要维持自律。'
     },
     {
@@ -330,7 +170,6 @@
       requirements: { creativity: 80, judgment: 70 },
       benefit: '解锁创作室高级任务，提升创意与判断力。',
       income: 260,
-      focus: ['studio', 'library'],
       suggested: '建议多去创作室提升创意，再去图书馆提升判断力。'
     },
     {
@@ -340,7 +179,6 @@
       requirements: { business: 85, resilience: 80 },
       benefit: '解锁创业中心高级收入与风险挑战。',
       income: 350,
-      focus: ['business', 'school'],
       suggested: '建议多去创业中心提升商业能力，也要通过事件训练抗挫力。'
     },
     {
@@ -350,7 +188,6 @@
       requirements: { knowledge: 90, discipline: 75 },
       benefit: '解锁未来都市科技任务与 AI 项目收入。',
       income: 320,
-      focus: ['school', 'library'],
       suggested: '建议多去学校和图书馆提升知识，并维持自律。'
     },
     {
@@ -360,7 +197,6 @@
       requirements: { judgment: 90, social: 70 },
       benefit: '解锁资产、租金、预算与谈判事件。',
       income: 330,
-      focus: ['library', 'social'],
       suggested: '建议多去图书馆提升判断力，再去社交区提升沟通。'
     },
     {
@@ -370,29 +206,30 @@
       requirements: { creativity: 85, social: 75 },
       benefit: '解锁影响力任务、粉丝事件与创意收入。',
       income: 280,
-      focus: ['studio', 'social'],
       suggested: '建议多去创作室提升创意，也要去社交区练习表达。'
     }
   ];
 
-  function getCareers() {
-    if (Array.isArray(window.careerPaths) && window.careerPaths.length) {
-      return window.careerPaths.map((career, index) => ({
-        id: career.id || career.name.replace(/\s+/g, '_') || `career_${index}`,
-        emoji: career.emoji || '💼',
-        name: career.name,
-        requirements: career.requirements || {},
-        benefit: career.benefit || '解锁新的成长机会。',
-        income: career.income || 200 + index * 30,
-        focus: career.focus || [],
-        suggested: career.suggested || '继续提升相关能力，就会越来越接近这个职业。'
-      }));
-    }
-
-    return defaultCareers;
+  function normalizeCareer(career, index) {
+    return {
+      id: career.id || (career.name || `career_${index}`).replace(/\s+/g, '_'),
+      emoji: career.emoji || '💼',
+      name: career.name || `职业 ${index + 1}`,
+      requirements: career.requirements || {},
+      benefit: career.benefit || '解锁新的成长机会。',
+      income: career.income || 200 + index * 30,
+      suggested: career.suggested || '继续提升相关能力，就会越来越接近这个职业。'
+    };
   }
 
-  function getCareerProgress(career) {
+  function getCareers() {
+    if (Array.isArray(window.careerPaths) && window.careerPaths.length) {
+      return window.careerPaths.map(normalizeCareer);
+    }
+    return defaultCareers.map(normalizeCareer);
+  }
+
+  function getCareerProgressSafe(career) {
     ensureCareerState();
 
     const missing = [];
@@ -418,13 +255,13 @@
     };
   }
 
-  window.getCareerProgress = getCareerProgress;
+  window.getCareerProgress = getCareerProgressSafe;
 
   function updateUnlockedCareers() {
-    ensureCareerState();
+    if (!ensureCareerState()) return;
 
     getCareers().forEach(career => {
-      const progress = getCareerProgress(career);
+      const progress = getCareerProgressSafe(career);
       if (progress.unlocked && !state.careers.unlocked.includes(career.id)) {
         state.careers.unlocked.push(career.id);
         safeToast(`新职业方向解锁：${career.emoji} ${career.name}！`);
@@ -437,8 +274,10 @@
 
   function bestCareer() {
     const careers = getCareers();
+    if (!careers.length) return null;
+
     return careers
-      .map(career => ({ career, progress: getCareerProgress(career) }))
+      .map(career => ({ career, progress: getCareerProgressSafe(career) }))
       .sort((a, b) => b.progress.average - a.progress.average)[0];
   }
 
@@ -476,7 +315,7 @@
     const career = getCareers().find(c => c.id === careerId);
     if (!career) return;
 
-    const progress = getCareerProgress(career);
+    const progress = getCareerProgressSafe(career);
     if (!progress.unlocked) {
       alert('还没有达到这个职业的条件，继续成长吧！');
       return;
@@ -502,9 +341,11 @@
   window.claimCareerReward = claimCareerReward;
 
   function renderCareerCard(career) {
-    const progress = getCareerProgress(career);
-    const selected = state.careers.selected === career.id;
-    const claimed = state.careers.claimedRewards.includes(career.id);
+    ensureCareerState();
+
+    const progress = getCareerProgressSafe(career);
+    const selected = state.careers && state.careers.selected === career.id;
+    const claimed = state.careers && state.careers.claimedRewards.includes(career.id);
 
     const missingText = progress.unlocked
       ? '✅ 已达到职业条件'
@@ -528,9 +369,7 @@
           ${Object.entries(career.requirements).map(([stat, req]) => renderRequirementBar(stat, req)).join('')}
         </div>
 
-        <div class="koin-career-suggest">
-          💡 ${career.suggested}
-        </div>
+        <div class="koin-career-suggest">💡 ${career.suggested}</div>
 
         <div class="koin-career-actions">
           <button class="btn secondary" data-career-select="${career.id}">
@@ -549,9 +388,20 @@
     updateUnlockedCareers();
 
     const careers = getCareers();
-    const unlocked = careers.filter(c => getCareerProgress(c).unlocked);
-    const tracked = careers.find(c => c.id === state.careers.selected);
+    const unlocked = careers.filter(c => getCareerProgressSafe(c).unlocked);
+    const tracked = careers.find(c => c.id === (state.careers ? state.careers.selected : null));
     const best = bestCareer();
+
+    if (!best) {
+      return `
+        <div class="koin-career-hub" id="careerHub">
+          <div class="koin-career-hero">
+            <h2>🚀 Career Center 职业中心</h2>
+            <p>职业系统正在准备中。</p>
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div class="koin-career-hub" id="careerHub">
@@ -595,7 +445,7 @@
   }
 
   function injectCareerHubIntoCity() {
-    ensureCareerState();
+    if (!ensureCareerState()) return;
     injectCareerStyles();
 
     const pageCity = $safe('page-city');
@@ -616,13 +466,15 @@
   }
 
   function patchHomeCareerMini() {
-    ensureCareerState();
+    if (!ensureCareerState()) return;
 
     const lifeSummary = $safe('lifeSummary');
     if (!lifeSummary || lifeSummary.dataset.koinCareerMini === '1') return;
 
-    lifeSummary.dataset.koinCareerMini = '1';
     const best = bestCareer();
+    if (!best) return;
+
+    lifeSummary.dataset.koinCareerMini = '1';
 
     lifeSummary.innerHTML += `
       <div class="koin-career-mini-link" data-switch="city">
@@ -636,11 +488,15 @@
   }
 
   function patchParentCareerSummary() {
+    if (!ensureCareerState()) return;
+
     const parentAdvice = $safe('parentAdvice');
     if (!parentAdvice || parentAdvice.dataset.koinCareerAdvice === '1') return;
 
-    parentAdvice.dataset.koinCareerAdvice = '1';
     const best = bestCareer();
+    if (!best) return;
+
+    parentAdvice.dataset.koinCareerAdvice = '1';
 
     parentAdvice.innerHTML += `
       <p style="margin-top:10px">
@@ -670,10 +526,10 @@
   }, true);
 
   const originalRender = window.render;
-  if (typeof originalRender === 'function' && !window.__koinCareerRenderPatchedV1) {
-    window.__koinCareerRenderPatchedV1 = true;
+  if (typeof originalRender === 'function' && !window.__koinCareerRenderPatchedV2) {
+    window.__koinCareerRenderPatchedV2 = true;
 
-    window.render = function patchedRenderCareer() {
+    window.render = function patchedRenderCareerV2() {
       originalRender();
       ensureCareerState();
       injectCareerStyles();
@@ -692,5 +548,5 @@
 
   if (typeof render === 'function') render();
 
-  console.log('[Koin City V2] Career Unlock Patch v1 loaded');
+  console.log('[Koin City V2] Career Unlock Patch v2 SAFE loaded');
 })();
