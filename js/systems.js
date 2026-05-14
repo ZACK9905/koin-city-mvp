@@ -6,6 +6,65 @@ function currentScene() {
   return scenes[(state.day - 1) % scenes.length];
 }
 
+function hasDoneLifeEventToday() {
+  return state.lastEventDate === getTodayKey();
+}
+
+function hasDoneNpcToday() {
+  return state.npcEventDate === getTodayKey() || state.npcEventDone === true;
+}
+
+function hasDoneReflectionToday() {
+  return state.lastReflectionDate === getTodayKey();
+}
+
+function dailySync() {
+  const today = getTodayKey();
+  const yesterday = getYesterdayKey();
+
+  if (!state.lastVisitDate) {
+    state.lastVisitDate = today;
+    state.streak = Math.max(state.streak || 0, 1);
+    save();
+    return;
+  }
+
+  if (state.lastVisitDate !== today) {
+    if (state.lastVisitDate === yesterday) {
+      state.streak = (state.streak || 0) + 1;
+    } else {
+      state.streak = 1;
+    }
+
+    state.lastVisitDate = today;
+
+    // Reset daily content
+    state.completedQuests = [];
+    state.questProgress = {};
+    state.npcEventDone = false;
+    state.npcEventDate = null;
+    state.energy = Math.min(100, (state.energy || 0) + 35);
+
+    // Daily login reward
+    if (state.dailyLoginClaimedDate !== today) {
+      const loginBonus = 20 + Math.min(state.streak, 7) * 5;
+      state.coins += loginBonus;
+      state.dailyLoginClaimedDate = today;
+
+      setTimeout(() => {
+        if (typeof showToast === 'function') {
+          showToast(`每日登录奖励 +${loginBonus} 🪙`);
+        }
+        if (typeof createCoinBurst === 'function') {
+          createCoinBurst(`+${loginBonus} 🪙`);
+        }
+      }, 500);
+    }
+
+    save();
+  }
+}
+
 function addReward(coins, xp) {
   state.coins += coins;
   state.xp += xp;
@@ -22,6 +81,18 @@ function addReward(coins, xp) {
 }
 
 function applyChoice(i) {
+  dailySync();
+
+  if (hasDoneLifeEventToday()) {
+    alert('今天的人生事件已经完成了。\n\n明天回来会解锁新的事件。');
+    return;
+  }
+
+  if (state.energy < 10) {
+    alert('能量不足。休息一下，明天再继续成长。');
+    return;
+  }
+
   const scene = currentScene();
   const choice = scene.choices[i];
 
@@ -36,8 +107,7 @@ function applyChoice(i) {
 
   addReward(earnedCoins, earnedXp);
 
-  state.energy = Math.max(0, state.energy - 8);
-  state.streak += 1;
+  state.energy = Math.max(0, state.energy - 10);
 
   if (!state.questProgress) {
     state.questProgress = {};
@@ -65,10 +135,11 @@ function applyChoice(i) {
     date: new Date().toLocaleDateString('zh-MY')
   });
 
+  state.lastEventDate = getTodayKey();
   state.day += 1;
 
   createCoinBurst(`+${earnedCoins} 🪙`);
-  showToast('人生选择已记录 ✨');
+  showToast('今日人生事件完成 ✨ 明天回来继续成长');
 
   save();
   render();
@@ -112,6 +183,8 @@ function mentorQuestion() {
 }
 
 function saveReflection() {
+  dailySync();
+
   const input = $('reflectionInput');
 
   if (!input) {
@@ -131,11 +204,17 @@ function saveReflection() {
     return;
   }
 
+  if (hasDoneReflectionToday()) {
+    alert('今天已经完成一次深度反思了。\n\n你可以明天再回来继续记录新的成长。');
+    return;
+  }
+
   if (!state.questProgress) {
     state.questProgress = {};
   }
 
   state.questProgress.reflection = true;
+  state.lastReflectionDate = getTodayKey();
 
   state.reflections.unshift({
     text: txt,
@@ -155,7 +234,7 @@ function saveReflection() {
   input.value = '';
 
   createCoinBurst('+25 🪙');
-  showToast('反思完成，成长值提升 🧠');
+  showToast('今日反思完成，成长值提升 🧠');
 
   save();
   render();
@@ -167,12 +246,14 @@ function canClaimQuest(quest) {
 }
 
 function completeQuest(id, reward) {
+  dailySync();
+
   const quest = dailyQuests.find(q => q.id === id);
 
   if (!quest) return;
 
   if (state.completedQuests.includes(id)) {
-    showToast('这个任务已经领取过了 ✅');
+    showToast('这个任务今天已经领取过了 ✅');
     return;
   }
 
@@ -218,8 +299,15 @@ function buyItem(type, cost) {
 }
 
 function npcAction(type) {
-  if (state.npcEventDone) {
-    alert('今天的 NPC 事件已经完成了，不能重复刷奖励。');
+  dailySync();
+
+  if (hasDoneNpcToday()) {
+    alert('今天的 NPC 事件已经完成了，不能重复刷奖励。\n\n明天会有新的关系事件。');
+    return;
+  }
+
+  if (state.energy < 5) {
+    alert('能量不足。明天再处理关系事件吧。');
     return;
   }
 
@@ -231,6 +319,7 @@ function npcAction(type) {
 
   addReward(gain, 8);
 
+  state.energy = Math.max(0, state.energy - 5);
   state.stats.judgment = clamp(state.stats.judgment + 2);
 
   if (type === 'kind') {
@@ -249,9 +338,10 @@ function npcAction(type) {
   }
 
   state.npcEventDone = true;
+  state.npcEventDate = getTodayKey();
 
   createCoinBurst(`+${gain} 🪙`);
-  showToast('关系事件已完成 💛');
+  showToast('今日关系事件已完成 💛');
 
   save();
   render();
@@ -288,6 +378,9 @@ function resetDailyDemo() {
   state.completedQuests = [];
   state.questProgress = {};
   state.npcEventDone = false;
+  state.npcEventDate = null;
+  state.lastEventDate = null;
+  state.lastReflectionDate = null;
 
   save();
   render();
