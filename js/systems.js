@@ -20,12 +20,35 @@ function getYesterdayKey() {
   return `${year}-${month}-${day}`;
 }
 
+
+
+// ---------- Location Growth / Career Data ----------
+const locationTasks = {
+  school: { emoji:'🏫', name:'学校', title:'时间管理挑战', desc:'你今天把功课、休息和兴趣活动排好顺序，学会先完成重要的事。', energyCost:8, coins:18, xp:14, effects:{knowledge:6, discipline:3} },
+  library: { emoji:'📚', name:'图书馆', title:'专注阅读挑战', desc:'你安静阅读 25 分钟，并写下一个新想法。判断力开始提升。', energyCost:7, coins:15, xp:16, effects:{judgment:3, knowledge:5} },
+  gym: { emoji:'🏋️', name:'健身房', title:'坚持运动挑战', desc:'你完成一次基础训练，学习到身体管理也是人生管理的一部分。', energyCost:10, coins:12, xp:15, effects:{fitness:7, discipline:2, resilience:2} },
+  studio: { emoji:'🎨', name:'创作室', title:'创意表达挑战', desc:'你做出一个小作品，不管完不完美，先把想法表达出来。', energyCost:8, coins:16, xp:16, effects:{creativity:7, confidence:2} },
+  business: { emoji:'💼', name:'创业中心', title:'成本与定价挑战', desc:'你学习如何计算成本、定价和利润，发现赚钱不是靠运气。', energyCost:12, coins:28, xp:18, effects:{business:7, judgment:3} },
+  park: { emoji:'🌳', name:'公园', title:'情绪恢复挑战', desc:'你慢下来散步，整理心情。情绪稳定后，明天更容易做出好决定。', energyCost:0, energyGain:18, coins:8, xp:10, effects:{emotion:7, resilience:2} },
+  social: { emoji:'🗣️', name:'社交区', title:'沟通练习挑战', desc:'你练习表达自己的想法，也学习听别人说完。', energyCost:6, coins:14, xp:14, effects:{social:7, confidence:2} }
+};
+
+const careerPaths = [
+  { emoji:'🏋️', name:'健身教练 / 运动员', requirements:{discipline:80, fitness:70}, benefit:'解锁运动挑战与健康类收入' },
+  { emoji:'🎮', name:'游戏设计师', requirements:{creativity:80, judgment:70}, benefit:'解锁创作室高级任务' },
+  { emoji:'🧑‍💼', name:'创业家', requirements:{business:85, resilience:80}, benefit:'解锁创业中心高级收入' },
+  { emoji:'🤖', name:'AI 工程师', requirements:{knowledge:90, discipline:75}, benefit:'解锁未来都市科技任务' },
+  { emoji:'🏠', name:'房地产达人', requirements:{judgment:90, social:70}, benefit:'解锁资产与租金事件' },
+  { emoji:'🎬', name:'内容创作者', requirements:{creativity:85, social:75}, benefit:'解锁社交区影响力任务' }
+];
+
 function ensureDailyStateFields() {
   if (!state.completedQuests) state.completedQuests = [];
   if (!state.questProgress) state.questProgress = {};
   if (!state.inventory) state.inventory = [];
   if (!state.history) state.history = [];
   if (!state.reflections) state.reflections = [];
+  if (!state.locationHistory) state.locationHistory = [];
 
   if (!state.tutorial) {
     state.tutorial = {
@@ -84,6 +107,8 @@ function ensureDailyStateFields() {
   if (typeof state.dailyLoginClaimedDate === 'undefined') state.dailyLoginClaimedDate = null;
   if (typeof state.npcEventDate === 'undefined') state.npcEventDate = null;
   if (typeof state.npcEventDone === 'undefined') state.npcEventDone = false;
+  if (typeof state.dailyLocationDate === 'undefined') state.dailyLocationDate = null;
+  if (typeof state.dailyLocationActions !== 'number') state.dailyLocationActions = 0;
 }
 
 function currentScene() {
@@ -109,6 +134,11 @@ function dailySync() {
   const today = getTodayKey();
   const yesterday = getYesterdayKey();
 
+  if (state.dailyLocationDate !== today) {
+    state.dailyLocationDate = today;
+    state.dailyLocationActions = 0;
+  }
+
   if (!state.lastVisitDate) {
     state.lastVisitDate = today;
     state.streak = Math.max(state.streak || 0, 1);
@@ -129,6 +159,8 @@ function dailySync() {
     state.questProgress = {};
     state.npcEventDone = false;
     state.npcEventDate = null;
+    state.dailyLocationDate = today;
+    state.dailyLocationActions = 0;
     state.energy = Math.min(100, (state.energy || 0) + 35);
 
     if (state.dailyLoginClaimedDate !== today) {
@@ -312,6 +344,75 @@ function addReward(coins, xp) {
     state.coins += 60;
     if (typeof createCoinBurst === 'function') createCoinBurst('✨ LEVEL UP!');
   }
+}
+
+
+
+// ---------- Location Growth ----------
+function canDoLocationTask() {
+  dailySync();
+  return (state.dailyLocationActions || 0) < 2;
+}
+
+function applyStatEffects(effects) {
+  Object.entries(effects || {}).forEach(([k, v]) => {
+    const defaultValue = ['knowledge','creativity','fitness','social','business','emotion'].includes(k) ? 0 : 50;
+    state.stats[k] = clamp((state.stats[k] ?? defaultValue) + v);
+  });
+}
+
+function performLocationTask(locationKey) {
+  dailySync();
+  const task = locationTasks[locationKey];
+  if (!task) return;
+
+  if (!canDoLocationTask()) {
+    alert('今天的地点成长次数已经用完了。\n\n明天再去新的地点成长吧。');
+    return;
+  }
+
+  if (state.energy < task.energyCost) {
+    alert('能量不足，先休息或去公园恢复能量。');
+    return;
+  }
+
+  state.energy = Math.max(0, state.energy - task.energyCost);
+  if (task.energyGain) state.energy = Math.min(100, state.energy + task.energyGain);
+
+  addReward(task.coins, task.xp);
+  applyStatEffects(task.effects);
+  state.dailyLocationActions += 1;
+
+  state.locationHistory.unshift({
+    date: new Date().toLocaleDateString('zh-MY'),
+    key: locationKey,
+    name: task.name,
+    title: task.title,
+    desc: task.desc,
+    effects: task.effects,
+    reward: `+${task.coins} 金币 · +${task.xp} XP`
+  });
+
+  if (locationKey === 'school' || locationKey === 'library') state.questProgress.storyPositive = true;
+  if (locationKey === 'business') state.questProgress.savingChoice = true;
+
+  createCoinBurst(`+${task.coins} 🪙`);
+  showToast(`${task.name}成长完成：${task.title}`);
+  save();
+  render();
+}
+
+function getCareerProgress(job) {
+  const missing = [];
+  let unlocked = true;
+  Object.entries(job.requirements).forEach(([stat, req]) => {
+    const current = state.stats[stat] || 0;
+    if (current < req) {
+      unlocked = false;
+      missing.push({ stat, current, req, need: req - current });
+    }
+  });
+  return { unlocked, missing };
 }
 
 // ---------- Life Event ----------
@@ -609,6 +710,8 @@ function resetDailyDemo() {
   state.npcEventDate = null;
   state.lastEventDate = null;
   state.lastReflectionDate = null;
+  state.dailyLocationDate = getTodayKey();
+  state.dailyLocationActions = 0;
 
   save();
   render();
