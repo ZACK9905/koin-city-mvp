@@ -3,28 +3,59 @@
 
 const STORAGE_KEY = 'koinCityMvpV1';
 
+function getTodayKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getYesterdayKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const defaultState = {
   childName: '孩子',
   childAge: 12,
   theme: 'money',
+
+  // Game day is now linked to real daily progress.
+  // Each real-world day can unlock one main life event.
   day: 1,
+
   coins: 120,
   xp: 0,
   level: 1,
-  streak: 1,
+  streak: 0,
   energy: 100,
+
+  // Daily system
+  lastVisitDate: null,
+  lastEventDate: null,
+  lastReflectionDate: null,
+  dailyLoginClaimedDate: null,
+
   completedQuests: [],
   questProgress: {},
   inventory: [],
   petStage: 0,
   houseLevel: 0,
   npcEventDone: false,
+  npcEventDate: null,
+
   npcHearts: {
     dad: 55,
     friend: 68,
     mentor: 35,
     merchant: 20
   },
+
   stats: {
     discipline: 50,
     saving: 50,
@@ -34,11 +65,13 @@ const defaultState = {
     confidence: 50,
     goal: 45
   },
+
   history: [],
   reflections: []
 };
 
 let state = loadState();
+
 let mapDrag = {
   ready: false,
   dragging: false,
