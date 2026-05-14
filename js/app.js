@@ -61,11 +61,12 @@ function attachEvents() {
   $('resetDailyBtn').addEventListener('click', resetDailyDemo);
 }
 
+dailySync();
 attachEvents();
 render();
 
 setInterval(() => {
-  if (state.day > 2 && Math.random() < 0.08) {
+  if (state.day > 2 && Math.random() < 0.04) {
     triggerRandomEvent();
   }
-}, 18000);
+}, 30000);
