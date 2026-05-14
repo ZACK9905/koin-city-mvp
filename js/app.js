@@ -42,6 +42,13 @@ function attachEvents() {
       }
     }
 
+
+    const tutorial = e.target.closest('[data-tutorial-action]');
+
+    if (tutorial) {
+      handleTutorialAction(tutorial.dataset.tutorialAction);
+    }
+
     const zone = e.target.closest('[data-zone]');
 
     if (zone) {
@@ -66,7 +73,7 @@ attachEvents();
 render();
 
 setInterval(() => {
-  if (state.day > 2 && Math.random() < 0.04) {
+  if (state.day > 2 && Math.random() < 0.08) {
     triggerRandomEvent();
   }
-}, 30000);
+}, 18000);
