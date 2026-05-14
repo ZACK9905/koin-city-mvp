@@ -1,5 +1,47 @@
+// ---------- Core Helpers ----------
 function clamp(v) {
   return Math.max(0, Math.min(100, Math.round(v)));
+}
+
+// Keep date helpers inside systems.js as well.
+// This prevents runtime errors if state.js was cached or not updated yet.
+function getTodayKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getYesterdayKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function ensureDailyStateFields() {
+  if (!state.completedQuests) state.completedQuests = [];
+  if (!state.questProgress) state.questProgress = {};
+  if (!state.inventory) state.inventory = [];
+  if (!state.history) state.history = [];
+  if (!state.reflections) state.reflections = [];
+  if (!state.npcHearts) {
+    state.npcHearts = { dad: 55, friend: 68, mentor: 35, merchant: 20 };
+  }
+
+  if (typeof state.streak !== 'number') state.streak = 0;
+  if (typeof state.energy !== 'number') state.energy = 100;
+  if (typeof state.day !== 'number') state.day = 1;
+
+  if (typeof state.lastVisitDate === 'undefined') state.lastVisitDate = null;
+  if (typeof state.lastEventDate === 'undefined') state.lastEventDate = null;
+  if (typeof state.lastReflectionDate === 'undefined') state.lastReflectionDate = null;
+  if (typeof state.dailyLoginClaimedDate === 'undefined') state.dailyLoginClaimedDate = null;
+  if (typeof state.npcEventDate === 'undefined') state.npcEventDate = null;
+  if (typeof state.npcEventDone === 'undefined') state.npcEventDone = false;
 }
 
 function currentScene() {
@@ -18,7 +60,10 @@ function hasDoneReflectionToday() {
   return state.lastReflectionDate === getTodayKey();
 }
 
+// ---------- Daily System ----------
 function dailySync() {
+  ensureDailyStateFields();
+
   const today = getTodayKey();
   const yesterday = getYesterdayKey();
 
@@ -65,6 +110,7 @@ function dailySync() {
   }
 }
 
+// ---------- Reward / Progression ----------
 function addReward(coins, xp) {
   state.coins += coins;
   state.xp += xp;
@@ -80,6 +126,7 @@ function addReward(coins, xp) {
   }
 }
 
+// ---------- Life Event ----------
 function applyChoice(i) {
   dailySync();
 
@@ -145,6 +192,7 @@ function applyChoice(i) {
   render();
 }
 
+// ---------- Personality / Mentor ----------
 function analyzeTraits() {
   const s = state.stats;
   const arr = [];
@@ -240,6 +288,7 @@ function saveReflection() {
   render();
 }
 
+// ---------- Quests ----------
 function canClaimQuest(quest) {
   if (!quest || !state.questProgress) return false;
   return !!state.questProgress[quest.type];
@@ -274,6 +323,7 @@ function completeQuest(id, reward) {
   render();
 }
 
+// ---------- Shop ----------
 function buyItem(type, cost) {
   if (state.coins < cost) {
     alert('金币不足！继续完成任务吧～');
@@ -298,6 +348,7 @@ function buyItem(type, cost) {
   render();
 }
 
+// ---------- NPC ----------
 function npcAction(type) {
   dailySync();
 
@@ -347,6 +398,7 @@ function npcAction(type) {
   render();
 }
 
+// ---------- Settings ----------
 function saveSettings() {
   const childNameInput = $('childName');
   const childAgeInput = $('childAge');
