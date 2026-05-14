@@ -1,15 +1,71 @@
-// Main application file for Koin City MVP
+function attachEvents() {
+  $('mainNav').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-page]');
 
-console.log('Koin City MVP loaded');
+    if (btn) {
+      switchPage(btn.dataset.page);
+    }
+  });
 
-// Initialize the app
-function init() {
-    // Add initialization code here
+  document.body.addEventListener('click', e => {
+    const choice = e.target.closest('[data-choice]');
+
+    if (choice) {
+      applyChoice(Number(choice.dataset.choice));
+    }
+
+    const quest = e.target.closest('[data-quest]');
+
+    if (quest) {
+      completeQuest(quest.dataset.quest, Number(quest.dataset.reward));
+    }
+
+    const buy = e.target.closest('[data-buy]');
+
+    if (buy) {
+      buyItem(buy.dataset.buy, Number(buy.dataset.cost));
+    }
+
+    const sw = e.target.closest('[data-switch]');
+
+    if (sw) {
+      switchPage(sw.dataset.switch);
+    }
+
+    const shopJump = e.target.closest('[data-scroll-shop]');
+
+    if (shopJump) {
+      const shopList = document.getElementById('shopList');
+
+      if (shopList) {
+        shopList.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    const zone = e.target.closest('[data-zone]');
+
+    if (zone) {
+      openZone(zone.dataset.zone);
+    }
+
+    const npc = e.target.closest('[data-npc-action]');
+
+    if (npc) {
+      npcAction(npc.dataset.npcAction);
+    }
+  });
+
+  $('reflectionBtn').addEventListener('click', saveReflection);
+  $('saveSettingsBtn').addEventListener('click', saveSettings);
+  $('resetBtn').addEventListener('click', resetGame);
+  $('resetDailyBtn').addEventListener('click', resetDailyDemo);
 }
 
-// Start the app when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+attachEvents();
+render();
+
+setInterval(() => {
+  if (state.day > 2 && Math.random() < 0.08) {
+    triggerRandomEvent();
+  }
+}, 18000);
