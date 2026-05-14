@@ -1,6 +1,6 @@
-// Koin City V2 — Location Growth Patch v2
-// Load this file AFTER js/app.js in index.html.
-// <script src="js/v2-location-growth.js"></script>
+// Koin City V2 — Location Growth Patch v3
+// Replace existing js/v2-location-growth.js with this file.
+// Load AFTER js/app.js.
 
 (function () {
   function todayKey() {
@@ -50,6 +50,7 @@
       business: 0,
       emotion: 0,
       discipline: 50,
+      saving: 50,
       judgment: 50,
       resilience: 50,
       confidence: 50
@@ -95,143 +96,199 @@
   }
 
   function injectLocationStyles() {
-    if (document.getElementById('koinLocationPatchStyles')) return;
+    const old = document.getElementById('koinLocationPatchStyles');
+    if (old) old.remove();
 
     const style = document.createElement('style');
     style.id = 'koinLocationPatchStyles';
     style.textContent = `
-      .koin-location-grid{
-        display:grid;
-        grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:10px;
-        margin-top:12px;
+      #locationGrowthHub .koin-location-grid,
+      #zoneContent .koin-location-grid{
+        display:grid !important;
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+        gap:12px !important;
+        margin-top:14px !important;
+        width:100% !important;
       }
 
-      .koin-location-card{
-        border:1.5px solid rgba(124,92,252,.16);
-        background:linear-gradient(135deg,#fff,#fff8ef);
-        border-radius:18px;
-        padding:12px;
-        text-align:left;
-        cursor:pointer;
-        box-shadow:0 4px 16px rgba(124,92,252,.08);
-        color:var(--ink,#1A1034);
-        transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-        min-height:112px;
-        width:100%;
+      #locationGrowthHub .koin-location-card,
+      #zoneContent .koin-location-card{
+        all:unset !important;
+        box-sizing:border-box !important;
+        display:block !important;
+        width:100% !important;
+        min-height:132px !important;
+        padding:14px !important;
+        border-radius:20px !important;
+        border:1.5px solid rgba(124,92,252,.18) !important;
+        background:linear-gradient(145deg,#ffffff,#fff8ee) !important;
+        box-shadow:0 6px 18px rgba(124,92,252,.10) !important;
+        cursor:pointer !important;
+        color:var(--ink,#1A1034) !important;
+        font-family:inherit !important;
+        overflow:hidden !important;
+        white-space:normal !important;
+        word-break:keep-all !important;
+        line-height:1.25 !important;
       }
 
-      .koin-location-card:hover{
-        transform:translateY(-2px);
-        box-shadow:0 8px 24px rgba(124,92,252,.16);
-        border-color:rgba(124,92,252,.32);
+      #locationGrowthHub .koin-location-card:hover,
+      #zoneContent .koin-location-card:hover{
+        transform:translateY(-2px) !important;
+        box-shadow:0 10px 26px rgba(124,92,252,.18) !important;
+        border-color:rgba(124,92,252,.36) !important;
       }
 
-      .koin-location-card .top{
-        display:flex;
-        align-items:center;
-        gap:8px;
-        margin-bottom:6px;
+      #locationGrowthHub .koin-location-head,
+      #zoneContent .koin-location-head{
+        display:flex !important;
+        align-items:center !important;
+        gap:10px !important;
+        margin-bottom:8px !important;
+        min-width:0 !important;
       }
 
-      .koin-location-card .emoji{
-        font-size:28px;
-        width:36px;
-        height:36px;
-        border-radius:12px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        background:rgba(124,92,252,.08);
-        flex-shrink:0;
+      #locationGrowthHub .koin-location-emoji,
+      #zoneContent .koin-location-emoji{
+        width:40px !important;
+        height:40px !important;
+        min-width:40px !important;
+        border-radius:14px !important;
+        display:flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        background:rgba(124,92,252,.10) !important;
+        font-size:25px !important;
+        line-height:1 !important;
       }
 
-      .koin-location-card .name{
-        font-weight:900;
-        font-size:14px;
-        line-height:1.15;
-        white-space:normal;
-        word-break:keep-all;
+      #locationGrowthHub .koin-location-title,
+      #zoneContent .koin-location-title{
+        display:block !important;
+        font-size:15px !important;
+        font-weight:900 !important;
+        line-height:1.15 !important;
+        white-space:nowrap !important;
+        word-break:keep-all !important;
       }
 
-      .koin-location-card .desc{
-        font-size:11px;
-        color:var(--muted,#756e83);
-        line-height:1.35;
-        margin:6px 0 8px;
+      #locationGrowthHub .koin-location-subtitle,
+      #zoneContent .koin-location-subtitle{
+        display:block !important;
+        font-size:11px !important;
+        color:var(--muted,#756e83) !important;
+        font-weight:800 !important;
+        margin-top:2px !important;
+        line-height:1.2 !important;
+        white-space:nowrap !important;
       }
 
-      .koin-location-card .meta{
-        display:flex;
-        flex-wrap:wrap;
-        gap:5px;
+      #locationGrowthHub .koin-location-desc,
+      #zoneContent .koin-location-desc{
+        display:block !important;
+        font-size:12px !important;
+        color:var(--muted,#756e83) !important;
+        line-height:1.45 !important;
+        margin:8px 0 10px !important;
+        min-height:34px !important;
+        white-space:normal !important;
+        word-break:normal !important;
       }
 
-      .koin-location-card .pill{
-        font-size:10px;
-        font-weight:800;
-        border-radius:999px;
-        padding:4px 7px;
-        background:rgba(124,92,252,.10);
-        color:var(--violet,#7C5CFC);
+      #locationGrowthHub .koin-location-meta,
+      #zoneContent .koin-location-meta{
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:6px !important;
       }
 
-      .koin-stat-panel{
-        background:linear-gradient(135deg,rgba(124,92,252,.08),rgba(255,140,66,.08));
-        border:1.5px solid rgba(124,92,252,.12);
-        border-radius:20px;
-        padding:14px;
-        margin-top:12px;
+      #locationGrowthHub .koin-location-pill,
+      #zoneContent .koin-location-pill{
+        display:inline-flex !important;
+        align-items:center !important;
+        border-radius:999px !important;
+        padding:4px 8px !important;
+        font-size:10px !important;
+        font-weight:900 !important;
+        line-height:1 !important;
+        background:rgba(124,92,252,.10) !important;
+        color:var(--violet,#7C5CFC) !important;
+        white-space:nowrap !important;
       }
 
-      .koin-stat-panel h3{
-        font-size:15px;
-        margin-bottom:10px;
+      #locationGrowthHub .koin-current-stats,
+      #zoneContent .koin-current-stats{
+        margin-top:14px !important;
+        margin-bottom:14px !important;
+        border-radius:22px !important;
+        padding:16px !important;
+        background:linear-gradient(145deg,rgba(124,92,252,.10),rgba(255,140,66,.08)) !important;
+        border:1.5px solid rgba(124,92,252,.14) !important;
       }
 
-      .koin-stat-grid{
-        display:grid;
-        grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:8px;
+      #locationGrowthHub .koin-current-stats h3,
+      #zoneContent .koin-current-stats h3{
+        font-size:16px !important;
+        margin:0 0 10px !important;
+        font-weight:900 !important;
       }
 
-      .koin-stat-item{
-        background:#fff;
-        border-radius:14px;
-        padding:9px 10px;
-        border:1px solid rgba(124,92,252,.10);
+      #locationGrowthHub .koin-stat-grid,
+      #zoneContent .koin-stat-grid{
+        display:grid !important;
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+        gap:8px !important;
       }
 
-      .koin-stat-item .row{
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        gap:8px;
-        font-size:12px;
-        font-weight:900;
-        margin-bottom:6px;
+      #locationGrowthHub .koin-stat-box,
+      #zoneContent .koin-stat-box{
+        background:#fff !important;
+        border-radius:14px !important;
+        padding:10px !important;
+        border:1px solid rgba(124,92,252,.12) !important;
       }
 
-      .koin-stat-item .bar{
-        height:6px;
-        background:rgba(0,0,0,.08);
-        border-radius:99px;
-        overflow:hidden;
+      #locationGrowthHub .koin-stat-top,
+      #zoneContent .koin-stat-top{
+        display:flex !important;
+        align-items:center !important;
+        justify-content:space-between !important;
+        font-size:12px !important;
+        font-weight:900 !important;
+        margin-bottom:7px !important;
+        gap:8px !important;
       }
 
-      .koin-stat-item .fill{
-        height:100%;
-        background:linear-gradient(90deg,#7C5CFC,#FF8C42);
-        border-radius:99px;
+      #locationGrowthHub .koin-stat-value,
+      #zoneContent .koin-stat-value{
+        color:var(--violet,#7C5CFC) !important;
+      }
+
+      #locationGrowthHub .koin-stat-track,
+      #zoneContent .koin-stat-track{
+        height:7px !important;
+        border-radius:999px !important;
+        background:rgba(0,0,0,.08) !important;
+        overflow:hidden !important;
+      }
+
+      #locationGrowthHub .koin-stat-fill,
+      #zoneContent .koin-stat-fill{
+        height:100% !important;
+        border-radius:999px !important;
+        background:linear-gradient(90deg,#7C5CFC,#FF8C42) !important;
       }
 
       .koin-strip-item-active{
-        outline:2px solid rgba(124,92,252,.25);
-        transform:translateY(-1px);
+        outline:2px solid rgba(124,92,252,.25) !important;
+        transform:translateY(-1px) !important;
       }
 
       @media(max-width:380px){
-        .koin-location-grid{grid-template-columns:1fr}
+        #locationGrowthHub .koin-location-grid,
+        #zoneContent .koin-location-grid{
+          grid-template-columns:1fr !important;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -254,7 +311,7 @@
       name: '图书馆',
       title: '专注阅读挑战',
       short: '知识 + 判断',
-      desc: '阅读 25 分钟，写下一个新想法。',
+      desc: '阅读 25 分钟，写下新想法。',
       energyCost: 7,
       coins: 15,
       xp: 16,
@@ -276,7 +333,7 @@
       name: '创作室',
       title: '创意表达挑战',
       short: '创意 + 自信',
-      desc: '做出一个小作品，先表达想法。',
+      desc: '做出小作品，表达想法。',
       energyCost: 8,
       coins: 16,
       xp: 16,
@@ -285,7 +342,7 @@
     business: {
       emoji: '💼',
       name: '创业中心',
-      title: '成本与定价挑战',
+      title: '成本定价挑战',
       short: '商业 + 判断',
       desc: '学习成本、定价和利润。',
       energyCost: 12,
@@ -310,7 +367,7 @@
       name: '社交区',
       title: '沟通练习挑战',
       short: '沟通 + 自信',
-      desc: '练习表达，也学习听别人说完。',
+      desc: '练习表达，也学习聆听。',
       energyCost: 6,
       coins: 14,
       xp: 14,
@@ -344,23 +401,36 @@
     return { unlocked, missing };
   };
 
-  function renderStatPanel() {
+  function renderCurrentStats() {
     ensureLocationState();
 
-    const keys = ['knowledge', 'creativity', 'fitness', 'social', 'business', 'emotion', 'discipline', 'judgment'];
+    const primary = [
+      ['knowledge', '🧠'],
+      ['creativity', '🎨'],
+      ['fitness', '💪'],
+      ['social', '🗣️'],
+      ['business', '💼'],
+      ['emotion', '🌱'],
+      ['discipline', '🔥'],
+      ['judgment', '⚖️']
+    ];
+
     return `
-      <div class="koin-stat-panel">
-        <h3>📊 目前成长数值</h3>
+      <div class="koin-current-stats">
+        <h3>📊 目前我的成长数值</h3>
         <div class="koin-stat-grid">
-          ${keys.map(key => {
+          ${primary.map(([key, icon]) => {
             const value = state.stats[key] || 0;
+            const width = Math.min(100, Math.max(0, value));
             return `
-              <div class="koin-stat-item">
-                <div class="row">
-                  <span>${statLabel(key)}</span>
-                  <span>${value}</span>
+              <div class="koin-stat-box">
+                <div class="koin-stat-top">
+                  <span>${icon} ${statLabel(key)}</span>
+                  <span class="koin-stat-value">${value}</span>
                 </div>
-                <div class="bar"><div class="fill" style="width:${Math.min(100, Math.max(0, value))}%"></div></div>
+                <div class="koin-stat-track">
+                  <div class="koin-stat-fill" style="width:${width}%"></div>
+                </div>
               </div>
             `;
           }).join('')}
@@ -372,33 +442,38 @@
   function renderLocationButtons(keys) {
     ensureLocationState();
 
-    return `<div class="koin-location-grid">
-      ${keys.map(key => {
-        const t = locationTasks[key];
-        const effectText = Object.entries(t.effects)
-          .map(([stat, amount]) => `${statLabel(stat)}+${amount}`)
-          .join(' · ');
+    return `
+      <div class="koin-location-grid">
+        ${keys.map(key => {
+          const t = locationTasks[key];
+          const mainEffect = Object.entries(t.effects)
+            .slice(0, 2)
+            .map(([stat, amount]) => `${statLabel(stat)}+${amount}`)
+            .join(' · ');
 
-        return `
-          <button class="koin-location-card" data-location-task="${key}">
-            <div class="top">
-              <div class="emoji">${t.emoji}</div>
-              <div>
-                <div class="name">${t.name}</div>
-                <div style="font-size:10px;color:var(--muted,#756e83);font-weight:800">${t.short}</div>
+          return `
+            <button type="button" class="koin-location-card" data-location-task="${key}">
+              <div class="koin-location-head">
+                <div class="koin-location-emoji">${t.emoji}</div>
+                <div style="min-width:0">
+                  <span class="koin-location-title">${t.name}</span>
+                  <span class="koin-location-subtitle">${t.short}</span>
+                </div>
               </div>
-            </div>
-            <div class="desc">${t.desc}</div>
-            <div class="meta">
-              <span class="pill">-${t.energyCost || 0}⚡</span>
-              <span class="pill">+${t.coins}🪙</span>
-              <span class="pill">+${t.xp}XP</span>
-              <span class="pill">${effectText}</span>
-            </div>
-          </button>
-        `;
-      }).join('')}
-    </div>`;
+
+              <span class="koin-location-desc">${t.desc}</span>
+
+              <span class="koin-location-meta">
+                <span class="koin-location-pill">-${t.energyCost || 0}⚡</span>
+                <span class="koin-location-pill">+${t.coins}🪙</span>
+                <span class="koin-location-pill">+${t.xp}XP</span>
+                <span class="koin-location-pill">${mainEffect}</span>
+              </span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
   }
 
   function renderCareerPreview() {
@@ -487,7 +562,7 @@
     const content = {
       home: `<b>🏠 我的家</b><br><br>这里是你的成长基地。你可以升级房间、查看宠物和摆放家具。
         <div class="lock-note">今日地点成长次数剩余：${remaining}/2</div>
-        ${renderStatPanel()}
+        ${renderCurrentStats()}
         ${renderLocationButtons(['park'])}
         <div class="action-row">
           <button class="btn green" data-switch="city">查看房间</button>
@@ -501,24 +576,25 @@
         </div>`,
 
       school: `<b>🏫 成长学院</b><br><br>这里不只是学校。你可以去不同地点训练不同能力。今天还剩 <b>${remaining}/2</b> 次地点成长。
-        ${renderStatPanel()}
+        ${renderCurrentStats()}
         ${renderLocationButtons(['school','library','gym','studio','social'])}`,
 
       business: `<b>🏢 创业中心</b><br><br>这里可以训练商业能力，也可以查看未来职业路线。
         <div class="lock-note">今日地点成长次数剩余：${remaining}/2</div>
-        ${renderStatPanel()}
+        ${renderCurrentStats()}
         ${renderLocationButtons(['business'])}
         <h3 style="margin-top:16px">🚀 职业解锁预览</h3>
         ${renderCareerPreview()}`,
 
       future: `<b>🚀 未来都市</b><br><br>这里是高等级区域。继续成长后，你会遇到更大的机会和更难的人生选择。
         <div class="action-row"><button class="btn" data-switch="parent">查看成长报告</button></div>
-        ${renderStatPanel()}
+        ${renderCurrentStats()}
         <h3 style="margin-top:16px">职业路线</h3>
         ${renderCareerPreview()}`,
 
       bank: `<b>🏦 银行</b><br><br>银行系统还在建设中。未来这里会管理储蓄、房租、预算和月度账单。
-        <div class="lock-note">即将开放：储蓄目标、月度房租、预算挑战</div>`
+        <div class="lock-note">即将开放：储蓄目标、月度房租、预算挑战</div>
+        ${renderCurrentStats()}`
     };
 
     if (!content[type]) return false;
@@ -557,7 +633,7 @@
       <h2>🌱 地点成长中心</h2>
       <p class="muted">每天可以选择 2 个地点成长。不同地点会增加不同能力，也会影响未来职业路线。</p>
       <div class="lock-note">今日剩余：${Math.max(0, 2 - (state.dailyLocationActions || 0))}/2 次</div>
-      ${renderStatPanel()}
+      ${renderCurrentStats()}
       ${renderLocationButtons(['school','library','gym','studio','park','social'])}
       <div style="margin-top:14px">
         <h3 style="font-size:15px;margin-bottom:8px">🚀 职业路线预览</h3>
@@ -621,14 +697,7 @@
     if (growthReport && !growthReport.dataset.koinLocationStatsAdded) {
       growthReport.dataset.koinLocationStatsAdded = '1';
 
-      const extraStats = ['knowledge','creativity','fitness','social','business','emotion'];
-      growthReport.innerHTML += extraStats.map(key => {
-        const value = state.stats[key] || 0;
-        return `<div style="margin-bottom:12px">
-          <div style="font-weight:900">${statLabel(key)} +${value}</div>
-          <div class="bar"><div class="fill" style="width:${Math.min(100, value)}%"></div></div>
-        </div>`;
-      }).join('');
+      growthReport.innerHTML += '<div style="margin-top:16px"></div>' + renderCurrentStats();
     }
   }
 
@@ -642,12 +711,13 @@
   }, true);
 
   const originalRender = window.render;
-  if (typeof originalRender === 'function' && !window.__koinLocationRenderPatchedV2) {
-    window.__koinLocationRenderPatchedV2 = true;
+  if (typeof originalRender === 'function' && !window.__koinLocationRenderPatchedV3) {
+    window.__koinLocationRenderPatchedV3 = true;
 
     window.render = function patchedRender() {
       originalRender();
       ensureLocationState();
+      injectLocationStyles();
       refreshLocationHub();
       attachCityStripClicks();
       patchReportText();
@@ -663,5 +733,5 @@
 
   if (typeof render === 'function') render();
 
-  console.log('[Koin City V2] Location Growth Patch v2 loaded');
+  console.log('[Koin City V2] Location Growth Patch v3 loaded');
 })();
