@@ -70,6 +70,37 @@ function setupMapDrag() {
   });
 }
 
+
+function statLabel(key) {
+  const labels = {
+    discipline:'自律', saving:'储蓄', judgment:'判断力', resilience:'抗挫力', impulse:'冲动', confidence:'自信', goal:'目标感',
+    knowledge:'知识', creativity:'创意', fitness:'活力', social:'沟通', business:'商业', emotion:'情绪'
+  };
+  return labels[key] || key;
+}
+
+function renderLocationButtons(keys) {
+  return `<div class="action-row">${keys.map(key => {
+    const t = locationTasks[key];
+    return `<button class="btn ${key === 'park' ? 'green' : ''}" data-location-task="${key}">
+      ${t.emoji} ${t.name}
+      <small style="display:block;font-size:10px;opacity:.8;margin-top:2px">-${t.energyCost || 0}⚡ · +${t.xp}XP</small>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+function renderCareerPreview() {
+  return `<div style="display:grid;gap:10px;margin-top:12px">${careerPaths.map(job => {
+    const progress = getCareerProgress(job);
+    const missingText = progress.unlocked ? '✅ 已达到条件' : progress.missing.map(m => `${statLabel(m.stat)} 还差 ${m.need}`).join(' · ');
+    return `<div style="background:#fff;border-radius:14px;padding:12px;border:1px solid rgba(124,92,252,.14)">
+      <strong>${job.emoji} ${job.name}</strong>
+      <p class="muted" style="margin-top:4px">${job.benefit}</p>
+      <div class="lock-note" style="margin-top:8px">${missingText}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
 function openZone(type) {
   const locked = (type === 'business' && state.level < 3) || (type === 'future' && state.level < 6);
 
@@ -78,17 +109,30 @@ function openZone(type) {
     return;
   }
 
+  const remaining = Math.max(0, 2 - (state.dailyLocationActions || 0));
+
   const content = {
     home: `<b>🏠 我的家</b><br><br>这里是你的成长基地。你可以升级房间、查看宠物和摆放家具。
+      <div class="lock-note">今日地点成长次数剩余：${remaining}/2</div>
+      ${renderLocationButtons(['park'])}
       <div class="action-row"><button class="btn green" data-switch="city">查看房间</button><button class="btn secondary" data-switch="quests">去赚金币</button></div>`,
+
     shop: `<b>🏪 商店区</b><br><br>这里可以买家具、宠物和房间升级。金币不够就先去完成任务。
       <div class="action-row"><button class="btn green" data-scroll-shop="1">打开奖励商店</button><button class="btn secondary" data-switch="quests">去做任务</button></div>`,
-    school: `<b>🏫 学校</b><br><br>这里会出现学习、人际关系与选择事件。每天只能完成一个主要人生事件。
-      <div class="action-row"><button class="btn" data-switch="story">开始人生事件</button><button class="btn secondary" data-switch="mentor">找 AI 导师</button></div>`,
-    business: `<b>🏢 创业中心</b><br><br>你已经解锁创业系统！你可以开始接受赚钱挑战，学习经营自己的小事业。
-      <div class="action-row"><button class="btn" data-switch="story">创业挑战</button></div>`,
+
+    school: `<b>🏫 成长学院</b><br><br>这里不只是学校。你可以去不同地点训练不同能力。今天还剩 <b>${remaining}/2</b> 次地点成长。
+      ${renderLocationButtons(['school','library','gym','studio','social'])}`,
+
+    business: `<b>🏢 创业中心</b><br><br>你已经解锁创业系统！这里可以训练商业能力，也可以查看未来职业路线。
+      <div class="lock-note">今日地点成长次数剩余：${remaining}/2</div>
+      ${renderLocationButtons(['business'])}
+      <h3 style="margin-top:16px">🚀 职业解锁预览</h3>
+      ${renderCareerPreview()}`,
+
     future: `<b>🚀 未来都市</b><br><br>这里是高等级区域。继续成长后，你会遇到更大的机会和更难的人生选择。
-      <div class="action-row"><button class="btn" data-switch="parent">查看成长报告</button></div>`
+      <div class="action-row"><button class="btn" data-switch="parent">查看成长报告</button></div>
+      <h3 style="margin-top:16px">职业路线</h3>
+      ${renderCareerPreview()}`
   };
 
   $('zoneContent').innerHTML = content[type];
@@ -120,7 +164,8 @@ function triggerRandomEvent() {
 
 function statLine(k, label) {
   const now = state.stats[k] || 0;
-  const diff = now - 50;
+  const baseline = ['knowledge','creativity','fitness','social','business','emotion'].includes(k) ? 0 : 50;
+  const diff = now - baseline;
 
   return `<div style="margin-bottom:12px"><div style="font-weight:900">${label} ${diff >= 0 ? '+' : ''}${diff}%</div><div class="bar"><div class="fill" style="width:${Math.max(0, now)}%"></div></div></div>`;
 }
@@ -266,6 +311,14 @@ function getNextAction() {
     };
   }
 
+  if ((state.dailyLocationActions || 0) < 2) {
+    return {
+      title: '去地点训练能力',
+      text: '今天还可以去学校、图书馆、健身房等地点成长。',
+      buttons: [['打开城市地图', 'city', 'btn green']]
+    };
+  }
+
   if (!state.questProgress.reflection && !hasDoneReflectionToday()) {
     return {
       title: '完成一次 AI 反思',
@@ -321,12 +374,12 @@ function renderDailyEventLock(scene) {
   }
 
   $('sceneTitle').textContent = `Day ${state.day - 1} 已完成`;
-  $('sceneText').innerHTML = `✅ 今天的人生事件已经完成。<br><br>明天回来会解锁新的选择。你现在可以去完成反思、查看任务或升级 Koin City。`;
+  $('sceneText').innerHTML = `✅ 今天的人生事件已经完成。<br><br>明天回来会解锁新的选择。你现在可以去地点训练、完成反思、查看任务或升级 Koin City。`;
 
   $('choices').innerHTML = `
-    <button class="choice" data-switch="mentor">
-      <strong>🤖 去完成今日反思</strong>
-      <small>复盘今天的选择，获得成长值。</small>
+    <button class="choice" data-switch="city">
+      <strong>🏫 去地点训练能力</strong>
+      <small>学校、图书馆、健身房、创作室都会提升不同能力。</small>
     </button>
     <button class="choice" data-switch="quests">
       <strong>📜 查看今日任务</strong>
@@ -337,6 +390,20 @@ function renderDailyEventLock(scene) {
       <small>用金币升级你的城市。</small>
     </button>
   `;
+}
+
+
+function renderCareerSummary() {
+  const unlocked = careerPaths.filter(job => getCareerProgress(job).unlocked);
+  if (unlocked.length) {
+    return `已解锁职业方向：${unlocked.map(j => `${j.emoji}${j.name}`).join('、')}`;
+  }
+  const closest = careerPaths.map(job => {
+    const progress = getCareerProgress(job);
+    const totalNeed = progress.missing.reduce((sum, m) => sum + m.need, 0);
+    return { job, totalNeed, progress };
+  }).sort((a,b) => a.totalNeed - b.totalNeed)[0];
+  return `最接近的职业方向：${closest.job.emoji} ${closest.job.name}。还需要：${closest.progress.missing.map(m => `${statLabel(m.stat)}+${m.need}`).join('、')}`;
 }
 
 function render() {
@@ -410,7 +477,7 @@ function render() {
 
   $('personalityText').textContent = `Koin 会根据 ${state.childName} 的选择，调整任务和导师提问。现在最值得训练的是：${traits[0]}。`;
 
-  $('lifeSummary').innerHTML = `${state.childName} 现在来到第 <b>${state.day}</b> 天。系统记录了 <b>${state.history.length}</b> 次人生选择。${hasDoneLifeEventToday() ? '今天的主要事件已经完成。' : '今天还有一个主要事件可以完成。'}`;
+  $('lifeSummary').innerHTML = `${state.childName} 现在来到第 <b>${state.day}</b> 天。系统记录了 <b>${state.history.length}</b> 次人生选择。${hasDoneLifeEventToday() ? '今天的主要事件已经完成。' : '今天还有一个主要事件可以完成。'}<br><br><b>职业方向：</b>${renderCareerSummary()}<br><b>今日地点成长：</b>${state.dailyLocationActions || 0}/2`;
 
   $('welcomeTitle').textContent = `欢迎回来，${state.childName}！`;
 
@@ -500,9 +567,9 @@ function render() {
     statLine('knowledge', '知识') +
     statLine('social', '沟通');
 
-  $('parentAdvice').innerHTML = `<p>建议本周不要只看结果，可以多问：“你为什么这样选？”</p><p style="margin-top:8px">目前系统观察到：<b>${traits.join('、')}</b>。可以给玩家一个小任务：每天做一个选择前，先说出“我这样做的后果是什么”。</p>`;
+  $('parentAdvice').innerHTML = `<p>建议本周不要只看结果，可以多问：“你为什么这样选？”</p><p style="margin-top:8px">目前系统观察到：<b>${traits.join('、')}</b>。</p><p style="margin-top:8px"><b>职业方向：</b>${renderCareerSummary()}</p><p style="margin-top:8px">可以鼓励孩子明天选择一个地点训练，例如学校提升知识、健身房提升活力、社交区提升沟通。</p>`;
 
-  $('shareSummary').innerHTML = `${state.childName} 本月完成了 ${state.history.length} 次人生选择练习。自律 ${state.stats.discipline - 50 >= 0 ? '+' : ''}${state.stats.discipline - 50}%，储蓄稳定 ${state.stats.saving - 50 >= 0 ? '+' : ''}${state.stats.saving - 50}%，冲动消费倾向 ${state.stats.impulse - 50 >= 0 ? '+' : ''}${state.stats.impulse - 50}%。这不是成绩单，而是孩子真实的成长轨迹。`;
+  $('shareSummary').innerHTML = `${state.childName} 本月完成了 ${state.history.length} 次人生选择练习。自律 ${state.stats.discipline - 50 >= 0 ? '+' : ''}${state.stats.discipline - 50}，知识 ${state.stats.knowledge}，创意 ${state.stats.creativity}，沟通 ${state.stats.social}。这不是成绩单，而是孩子真实的成长轨迹。`;
 
   $('childName').value = state.childName;
   $('childAge').value = state.childAge;
