@@ -1,6 +1,3 @@
-// State management for Koin City MVP
-// This file manages the application state
-
 const STORAGE_KEY = 'koinCityMvpV1';
 
 function getTodayKey() {
@@ -25,7 +22,7 @@ const defaultState = {
   childAge: 12,
   theme: 'money',
 
-  // Game day is now linked to real daily progress.
+  // Game day is linked to real daily progress.
   // Each real-world day can unlock one main life event.
   day: 1,
 
@@ -43,9 +40,18 @@ const defaultState = {
 
   completedQuests: [],
   questProgress: {},
+
   inventory: [],
   petStage: 0,
+  petType: null,
+  petEggOwned: false,
+  petName: 'Koin Pet',
+  petMood: '期待孵化',
+  petExp: 0,
+
   houseLevel: 0,
+  roomItems: [],
+
   npcEventDone: false,
   npcEventDate: null,
 
@@ -63,7 +69,22 @@ const defaultState = {
     resilience: 50,
     impulse: 50,
     confidence: 50,
-    goal: 45
+    goal: 45,
+
+    // V2 growth stats
+    knowledge: 0,
+    creativity: 0,
+    fitness: 0,
+    social: 0,
+    business: 0,
+    emotion: 0
+  },
+
+  tutorial: {
+    completed: false,
+    step: 0,
+    starterClaimed: false,
+    petEggClaimed: false
   },
 
   history: [],
@@ -96,7 +117,9 @@ function mergeState(base, extra) {
       extra[k] &&
       typeof extra[k] === 'object' &&
       !Array.isArray(extra[k]) &&
-      base[k]
+      base[k] &&
+      typeof base[k] === 'object' &&
+      !Array.isArray(base[k])
     ) {
       base[k] = mergeState(base[k], extra[k]);
     } else {
