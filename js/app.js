@@ -8,6 +8,13 @@ function attachEvents() {
   });
 
   document.body.addEventListener('click', e => {
+    const tutorialBtn = e.target.closest('[data-tutorial-action]');
+
+    if (tutorialBtn) {
+      tutorialPrimaryAction();
+      return;
+    }
+
     const choice = e.target.closest('[data-choice]');
 
     if (choice) {
@@ -42,13 +49,6 @@ function attachEvents() {
       }
     }
 
-
-    const tutorial = e.target.closest('[data-tutorial-action]');
-
-    if (tutorial) {
-      handleTutorialAction(tutorial.dataset.tutorialAction);
-    }
-
     const zone = e.target.closest('[data-zone]');
 
     if (zone) {
@@ -73,7 +73,7 @@ attachEvents();
 render();
 
 setInterval(() => {
-  if (state.day > 2 && Math.random() < 0.08) {
+  if (state.day > 2 && Math.random() < 0.04) {
     triggerRandomEvent();
   }
-}, 18000);
+}, 30000);
