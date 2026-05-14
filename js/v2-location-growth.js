@@ -1,6 +1,6 @@
-// Koin City V2 — Location Growth Patch
+// Koin City V2 — Location Growth Patch v2
 // Load this file AFTER js/app.js in index.html.
-// It adds location growth without rewriting your existing working files.
+// <script src="js/v2-location-growth.js"></script>
 
 (function () {
   function todayKey() {
@@ -94,12 +94,156 @@
     return labels[key] || key;
   }
 
+  function injectLocationStyles() {
+    if (document.getElementById('koinLocationPatchStyles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'koinLocationPatchStyles';
+    style.textContent = `
+      .koin-location-grid{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:10px;
+        margin-top:12px;
+      }
+
+      .koin-location-card{
+        border:1.5px solid rgba(124,92,252,.16);
+        background:linear-gradient(135deg,#fff,#fff8ef);
+        border-radius:18px;
+        padding:12px;
+        text-align:left;
+        cursor:pointer;
+        box-shadow:0 4px 16px rgba(124,92,252,.08);
+        color:var(--ink,#1A1034);
+        transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        min-height:112px;
+        width:100%;
+      }
+
+      .koin-location-card:hover{
+        transform:translateY(-2px);
+        box-shadow:0 8px 24px rgba(124,92,252,.16);
+        border-color:rgba(124,92,252,.32);
+      }
+
+      .koin-location-card .top{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        margin-bottom:6px;
+      }
+
+      .koin-location-card .emoji{
+        font-size:28px;
+        width:36px;
+        height:36px;
+        border-radius:12px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:rgba(124,92,252,.08);
+        flex-shrink:0;
+      }
+
+      .koin-location-card .name{
+        font-weight:900;
+        font-size:14px;
+        line-height:1.15;
+        white-space:normal;
+        word-break:keep-all;
+      }
+
+      .koin-location-card .desc{
+        font-size:11px;
+        color:var(--muted,#756e83);
+        line-height:1.35;
+        margin:6px 0 8px;
+      }
+
+      .koin-location-card .meta{
+        display:flex;
+        flex-wrap:wrap;
+        gap:5px;
+      }
+
+      .koin-location-card .pill{
+        font-size:10px;
+        font-weight:800;
+        border-radius:999px;
+        padding:4px 7px;
+        background:rgba(124,92,252,.10);
+        color:var(--violet,#7C5CFC);
+      }
+
+      .koin-stat-panel{
+        background:linear-gradient(135deg,rgba(124,92,252,.08),rgba(255,140,66,.08));
+        border:1.5px solid rgba(124,92,252,.12);
+        border-radius:20px;
+        padding:14px;
+        margin-top:12px;
+      }
+
+      .koin-stat-panel h3{
+        font-size:15px;
+        margin-bottom:10px;
+      }
+
+      .koin-stat-grid{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px;
+      }
+
+      .koin-stat-item{
+        background:#fff;
+        border-radius:14px;
+        padding:9px 10px;
+        border:1px solid rgba(124,92,252,.10);
+      }
+
+      .koin-stat-item .row{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:8px;
+        font-size:12px;
+        font-weight:900;
+        margin-bottom:6px;
+      }
+
+      .koin-stat-item .bar{
+        height:6px;
+        background:rgba(0,0,0,.08);
+        border-radius:99px;
+        overflow:hidden;
+      }
+
+      .koin-stat-item .fill{
+        height:100%;
+        background:linear-gradient(90deg,#7C5CFC,#FF8C42);
+        border-radius:99px;
+      }
+
+      .koin-strip-item-active{
+        outline:2px solid rgba(124,92,252,.25);
+        transform:translateY(-1px);
+      }
+
+      @media(max-width:380px){
+        .koin-location-grid{grid-template-columns:1fr}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   window.locationTasks = {
     school: {
       emoji: '🏫',
       name: '学校',
       title: '时间管理挑战',
-      desc: '你把功课、休息和兴趣活动排好顺序，学会先完成重要的事。',
+      short: '知识 + 自律',
+      desc: '安排功课、休息和兴趣活动。',
       energyCost: 8,
       coins: 18,
       xp: 14,
@@ -109,7 +253,8 @@
       emoji: '📚',
       name: '图书馆',
       title: '专注阅读挑战',
-      desc: '你安静阅读 25 分钟，并写下一个新想法。判断力开始提升。',
+      short: '知识 + 判断',
+      desc: '阅读 25 分钟，写下一个新想法。',
       energyCost: 7,
       coins: 15,
       xp: 16,
@@ -119,7 +264,8 @@
       emoji: '🏋️',
       name: '健身房',
       title: '坚持运动挑战',
-      desc: '你完成一次基础训练，学习到身体管理也是人生管理的一部分。',
+      short: '活力 + 自律',
+      desc: '完成基础训练，管理身体。',
       energyCost: 10,
       coins: 12,
       xp: 15,
@@ -129,7 +275,8 @@
       emoji: '🎨',
       name: '创作室',
       title: '创意表达挑战',
-      desc: '你做出一个小作品，不管完不完美，先把想法表达出来。',
+      short: '创意 + 自信',
+      desc: '做出一个小作品，先表达想法。',
       energyCost: 8,
       coins: 16,
       xp: 16,
@@ -139,7 +286,8 @@
       emoji: '💼',
       name: '创业中心',
       title: '成本与定价挑战',
-      desc: '你学习如何计算成本、定价和利润，发现赚钱不是靠运气。',
+      short: '商业 + 判断',
+      desc: '学习成本、定价和利润。',
       energyCost: 12,
       coins: 28,
       xp: 18,
@@ -149,7 +297,8 @@
       emoji: '🌳',
       name: '公园',
       title: '情绪恢复挑战',
-      desc: '你慢下来散步，整理心情。情绪稳定后，明天更容易做出好决定。',
+      short: '情绪 + 恢复',
+      desc: '散步整理心情，恢复能量。',
       energyCost: 0,
       energyGain: 18,
       coins: 8,
@@ -160,7 +309,8 @@
       emoji: '🗣️',
       name: '社交区',
       title: '沟通练习挑战',
-      desc: '你练习表达自己的想法，也学习听别人说完。',
+      short: '沟通 + 自信',
+      desc: '练习表达，也学习听别人说完。',
       energyCost: 6,
       coins: 14,
       xp: 14,
@@ -169,42 +319,12 @@
   };
 
   window.careerPaths = [
-    {
-      emoji: '🏋️',
-      name: '健身教练 / 运动员',
-      requirements: { discipline: 80, fitness: 70 },
-      benefit: '解锁运动挑战与健康类收入'
-    },
-    {
-      emoji: '🎮',
-      name: '游戏设计师',
-      requirements: { creativity: 80, judgment: 70 },
-      benefit: '解锁创作室高级任务'
-    },
-    {
-      emoji: '🧑‍💼',
-      name: '创业家',
-      requirements: { business: 85, resilience: 80 },
-      benefit: '解锁创业中心高级收入'
-    },
-    {
-      emoji: '🤖',
-      name: 'AI 工程师',
-      requirements: { knowledge: 90, discipline: 75 },
-      benefit: '解锁未来都市科技任务'
-    },
-    {
-      emoji: '🏠',
-      name: '房地产达人',
-      requirements: { judgment: 90, social: 70 },
-      benefit: '解锁资产与租金事件'
-    },
-    {
-      emoji: '🎬',
-      name: '内容创作者',
-      requirements: { creativity: 85, social: 75 },
-      benefit: '解锁社交区影响力任务'
-    }
+    { emoji: '🏋️', name: '健身教练 / 运动员', requirements: { discipline: 80, fitness: 70 }, benefit: '解锁运动挑战与健康类收入' },
+    { emoji: '🎮', name: '游戏设计师', requirements: { creativity: 80, judgment: 70 }, benefit: '解锁创作室高级任务' },
+    { emoji: '🧑‍💼', name: '创业家', requirements: { business: 85, resilience: 80 }, benefit: '解锁创业中心高级收入' },
+    { emoji: '🤖', name: 'AI 工程师', requirements: { knowledge: 90, discipline: 75 }, benefit: '解锁未来都市科技任务' },
+    { emoji: '🏠', name: '房地产达人', requirements: { judgment: 90, social: 70 }, benefit: '解锁资产与租金事件' },
+    { emoji: '🎬', name: '内容创作者', requirements: { creativity: 85, social: 75 }, benefit: '解锁社交区影响力任务' }
   ];
 
   window.getCareerProgress = function getCareerProgress(job) {
@@ -224,19 +344,59 @@
     return { unlocked, missing };
   };
 
+  function renderStatPanel() {
+    ensureLocationState();
+
+    const keys = ['knowledge', 'creativity', 'fitness', 'social', 'business', 'emotion', 'discipline', 'judgment'];
+    return `
+      <div class="koin-stat-panel">
+        <h3>📊 目前成长数值</h3>
+        <div class="koin-stat-grid">
+          ${keys.map(key => {
+            const value = state.stats[key] || 0;
+            return `
+              <div class="koin-stat-item">
+                <div class="row">
+                  <span>${statLabel(key)}</span>
+                  <span>${value}</span>
+                </div>
+                <div class="bar"><div class="fill" style="width:${Math.min(100, Math.max(0, value))}%"></div></div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   function renderLocationButtons(keys) {
     ensureLocationState();
 
-    return `<div class="action-row" style="margin-top:12px">
+    return `<div class="koin-location-grid">
       ${keys.map(key => {
         const t = locationTasks[key];
+        const effectText = Object.entries(t.effects)
+          .map(([stat, amount]) => `${statLabel(stat)}+${amount}`)
+          .join(' · ');
 
-        return `<button class="btn ${key === 'park' ? 'green' : ''}" data-location-task="${key}">
-          ${t.emoji} ${t.name}
-          <small style="display:block;font-size:10px;opacity:.8;margin-top:2px">
-            -${t.energyCost || 0}⚡ · +${t.xp}XP
-          </small>
-        </button>`;
+        return `
+          <button class="koin-location-card" data-location-task="${key}">
+            <div class="top">
+              <div class="emoji">${t.emoji}</div>
+              <div>
+                <div class="name">${t.name}</div>
+                <div style="font-size:10px;color:var(--muted,#756e83);font-weight:800">${t.short}</div>
+              </div>
+            </div>
+            <div class="desc">${t.desc}</div>
+            <div class="meta">
+              <span class="pill">-${t.energyCost || 0}⚡</span>
+              <span class="pill">+${t.coins}🪙</span>
+              <span class="pill">+${t.xp}XP</span>
+              <span class="pill">${effectText}</span>
+            </div>
+          </button>
+        `;
       }).join('')}
     </div>`;
   }
@@ -306,12 +466,8 @@
     });
 
     if (!state.questProgress) state.questProgress = {};
-    if (locationKey === 'school' || locationKey === 'library') {
-      state.questProgress.storyPositive = true;
-    }
-    if (locationKey === 'business') {
-      state.questProgress.savingChoice = true;
-    }
+    if (locationKey === 'school' || locationKey === 'library') state.questProgress.storyPositive = true;
+    if (locationKey === 'business') state.questProgress.savingChoice = true;
 
     safeBurst(`+${task.coins} 🪙`);
     safeToast(`${task.name}成长完成：${task.title}`);
@@ -331,6 +487,7 @@
     const content = {
       home: `<b>🏠 我的家</b><br><br>这里是你的成长基地。你可以升级房间、查看宠物和摆放家具。
         <div class="lock-note">今日地点成长次数剩余：${remaining}/2</div>
+        ${renderStatPanel()}
         ${renderLocationButtons(['park'])}
         <div class="action-row">
           <button class="btn green" data-switch="city">查看房间</button>
@@ -344,16 +501,19 @@
         </div>`,
 
       school: `<b>🏫 成长学院</b><br><br>这里不只是学校。你可以去不同地点训练不同能力。今天还剩 <b>${remaining}/2</b> 次地点成长。
+        ${renderStatPanel()}
         ${renderLocationButtons(['school','library','gym','studio','social'])}`,
 
       business: `<b>🏢 创业中心</b><br><br>这里可以训练商业能力，也可以查看未来职业路线。
         <div class="lock-note">今日地点成长次数剩余：${remaining}/2</div>
+        ${renderStatPanel()}
         ${renderLocationButtons(['business'])}
         <h3 style="margin-top:16px">🚀 职业解锁预览</h3>
         ${renderCareerPreview()}`,
 
       future: `<b>🚀 未来都市</b><br><br>这里是高等级区域。继续成长后，你会遇到更大的机会和更难的人生选择。
         <div class="action-row"><button class="btn" data-switch="parent">查看成长报告</button></div>
+        ${renderStatPanel()}
         <h3 style="margin-top:16px">职业路线</h3>
         ${renderCareerPreview()}`,
 
@@ -378,13 +538,12 @@
 
     if (openGrowthZone(type)) return;
 
-    if (typeof originalOpenZone === 'function') {
-      return originalOpenZone(type);
-    }
+    if (typeof originalOpenZone === 'function') return originalOpenZone(type);
   };
 
   function injectLocationHub() {
     ensureLocationState();
+    injectLocationStyles();
 
     const pageCity = $safe('page-city');
     if (!pageCity || $safe('locationGrowthHub')) return;
@@ -398,6 +557,7 @@
       <h2>🌱 地点成长中心</h2>
       <p class="muted">每天可以选择 2 个地点成长。不同地点会增加不同能力，也会影响未来职业路线。</p>
       <div class="lock-note">今日剩余：${Math.max(0, 2 - (state.dailyLocationActions || 0))}/2 次</div>
+      ${renderStatPanel()}
       ${renderLocationButtons(['school','library','gym','studio','park','social'])}
       <div style="margin-top:14px">
         <h3 style="font-size:15px;margin-bottom:8px">🚀 职业路线预览</h3>
@@ -405,11 +565,8 @@
       </div>
     `;
 
-    if (guide && guide.parentNode) {
-      guide.parentNode.insertBefore(hub, guide.nextSibling);
-    } else {
-      pageCity.prepend(hub);
-    }
+    if (guide && guide.parentNode) guide.parentNode.insertBefore(hub, guide.nextSibling);
+    else pageCity.prepend(hub);
   }
 
   function refreshLocationHub() {
@@ -423,12 +580,13 @@
     if (!items.length) return;
 
     items.forEach(item => {
-      if (item.dataset.koinClickable === '1') return;
-      item.dataset.koinClickable = '1';
       item.style.cursor = 'pointer';
 
-      item.addEventListener('click', () => {
+      item.onclick = function () {
         const text = item.textContent || '';
+
+        items.forEach(x => x.classList.remove('koin-strip-item-active'));
+        item.classList.add('koin-strip-item-active');
 
         if (typeof switchPage === 'function') switchPage('city');
 
@@ -437,11 +595,12 @@
           else if (text.includes('商店')) window.openZone('shop');
           else if (text.includes('学校') || text.includes('公园')) window.openZone('school');
           else if (text.includes('银行')) window.openZone('bank');
+          else window.openZone('school');
 
           const zoneInfo = $safe('zoneInfo');
           if (zoneInfo) zoneInfo.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 150);
-      });
+        }, 250);
+      };
     });
   }
 
@@ -483,8 +642,8 @@
   }, true);
 
   const originalRender = window.render;
-  if (typeof originalRender === 'function' && !window.__koinLocationRenderPatched) {
-    window.__koinLocationRenderPatched = true;
+  if (typeof originalRender === 'function' && !window.__koinLocationRenderPatchedV2) {
+    window.__koinLocationRenderPatchedV2 = true;
 
     window.render = function patchedRender() {
       originalRender();
@@ -496,14 +655,13 @@
   }
 
   ensureLocationState();
+  injectLocationStyles();
   injectLocationHub();
   attachCityStripClicks();
   patchReportText();
   safeSave();
 
-  if (typeof render === 'function') {
-    render();
-  }
+  if (typeof render === 'function') render();
 
-  console.log('[Koin City V2] Location Growth Patch loaded');
+  console.log('[Koin City V2] Location Growth Patch v2 loaded');
 })();
