@@ -3,8 +3,7 @@ function clamp(v) {
   return Math.max(0, Math.min(100, Math.round(v)));
 }
 
-// Keep date helpers inside systems.js as well.
-// This prevents runtime errors if state.js was cached or not updated yet.
+// Keep date helpers here too, so systems.js is safe even if state.js is cached.
 function getTodayKey() {
   const now = new Date();
   const year = now.getFullYear();
@@ -26,6 +25,7 @@ function ensureDailyStateFields() {
   if (!state.completedQuests) state.completedQuests = [];
   if (!state.questProgress) state.questProgress = {};
   if (!state.inventory) state.inventory = [];
+  if (!state.roomItems) state.roomItems = [];
   if (!state.history) state.history = [];
   if (!state.reflections) state.reflections = [];
   if (!state.npcHearts) {
@@ -42,6 +42,46 @@ function ensureDailyStateFields() {
   if (typeof state.dailyLoginClaimedDate === 'undefined') state.dailyLoginClaimedDate = null;
   if (typeof state.npcEventDate === 'undefined') state.npcEventDate = null;
   if (typeof state.npcEventDone === 'undefined') state.npcEventDone = false;
+
+  if (!state.stats) state.stats = {};
+  const defaultStats = {
+    discipline: 50,
+    saving: 50,
+    judgment: 50,
+    resilience: 50,
+    impulse: 50,
+    confidence: 50,
+    goal: 45,
+    knowledge: 0,
+    creativity: 0,
+    fitness: 0,
+    social: 0,
+    business: 0,
+    emotion: 0
+  };
+
+  Object.keys(defaultStats).forEach(k => {
+    if (typeof state.stats[k] !== 'number') state.stats[k] = defaultStats[k];
+  });
+
+  if (!state.tutorial) {
+    state.tutorial = {
+      completed: false,
+      step: 0,
+      starterClaimed: false,
+      petEggClaimed: false
+    };
+  }
+
+  if (typeof state.tutorial.completed !== 'boolean') state.tutorial.completed = false;
+  if (typeof state.tutorial.step !== 'number') state.tutorial.step = 0;
+  if (typeof state.tutorial.starterClaimed !== 'boolean') state.tutorial.starterClaimed = false;
+  if (typeof state.tutorial.petEggClaimed !== 'boolean') state.tutorial.petEggClaimed = false;
+
+  if (typeof state.petEggOwned !== 'boolean') state.petEggOwned = false;
+  if (typeof state.petStage !== 'number') state.petStage = 0;
+  if (typeof state.petExp !== 'number') state.petExp = 0;
+  if (typeof state.petMood !== 'string') state.petMood = state.petStage > 0 ? '开心' : '期待孵化';
 }
 
 function currentScene() {
@@ -98,7 +138,7 @@ function dailySync() {
 
       setTimeout(() => {
         if (typeof showToast === 'function') {
-          showToast(`每日登录奖励 +${loginBonus} 🪙`);
+          showToast(`每日签到奖励 +${loginBonus} 🪙`);
         }
         if (typeof createCoinBurst === 'function') {
           createCoinBurst(`+${loginBonus} 🪙`);
@@ -110,8 +150,140 @@ function dailySync() {
   }
 }
 
+// ---------- Tutorial System ----------
+function isTutorialActive() {
+  ensureDailyStateFields();
+  return !state.tutorial.completed;
+}
+
+function setTutorialStep(step) {
+  ensureDailyStateFields();
+  state.tutorial.step = step;
+  save();
+  render();
+}
+
+function advanceTutorial() {
+  ensureDailyStateFields();
+
+  if (state.tutorial.completed) return;
+
+  state.tutorial.step += 1;
+
+  if (state.tutorial.step >= 7) {
+    state.tutorial.completed = true;
+    showToast('新手引导完成！欢迎正式开始 Koin City 🌱');
+  }
+
+  save();
+  render();
+}
+
+function claimStarterFund() {
+  ensureDailyStateFields();
+
+  if (state.tutorial.starterClaimed) {
+    showToast('起始成长基金已经领取过了 ✅');
+    advanceTutorial();
+    return;
+  }
+
+  state.coins += 500;
+  state.tutorial.starterClaimed = true;
+
+  if (!state.inventory.includes('starter-desk')) {
+    state.inventory.push('starter-desk');
+  }
+
+  if (!state.roomItems.includes('starter-desk')) {
+    state.roomItems.push('starter-desk');
+  }
+
+  state.petEggOwned = true;
+  state.tutorial.petEggClaimed = true;
+
+  createCoinBurst('+500 🪙');
+  showToast('获得 RM500 起始成长基金 + 普通书桌 + 宠物蛋 🎁');
+
+  state.tutorial.step = 2;
+  save();
+  render();
+}
+
+function hatchStarterPet() {
+  ensureDailyStateFields();
+
+  if (!state.petEggOwned) {
+    state.petEggOwned = true;
+  }
+
+  if (state.petStage === 0) {
+    state.petStage = 1;
+    state.petType = state.petType || 'hamster';
+    state.petName = state.petName || 'NutNut';
+    state.petMood = '刚孵化，很好奇';
+    state.petExp += 10;
+  }
+
+  state.tutorial.completed = true;
+  state.tutorial.step = 7;
+
+  createCoinBurst('🐹 孵化成功');
+  showToast('宠物伙伴加入了你的成长旅程！');
+
+  save();
+  render();
+}
+
+function handleTutorialAction(action) {
+  if (action === 'start') {
+    setTutorialStep(1);
+    return;
+  }
+
+  if (action === 'claim-starter') {
+    claimStarterFund();
+    return;
+  }
+
+  if (action === 'go-story') {
+    switchPage('story');
+    return;
+  }
+
+  if (action === 'go-quests') {
+    switchPage('quests');
+    return;
+  }
+
+  if (action === 'go-shop') {
+    switchPage('city');
+    setTimeout(() => {
+      const shop = document.getElementById('shopList');
+      if (shop) shop.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 250);
+    return;
+  }
+
+  if (action === 'go-report') {
+    switchPage('parent');
+    if (state.tutorial.step === 5) {
+      state.tutorial.step = 6;
+      save();
+      render();
+    }
+    return;
+  }
+
+  if (action === 'hatch-pet') {
+    hatchStarterPet();
+  }
+}
+
 // ---------- Reward / Progression ----------
 function addReward(coins, xp) {
+  ensureDailyStateFields();
+
   state.coins += coins;
   state.xp += xp;
 
@@ -124,6 +296,16 @@ function addReward(coins, xp) {
       createCoinBurst('✨ LEVEL UP!');
     }
   }
+}
+
+function applyFurnitureBuff(baseValue, statName) {
+  let multiplier = 1;
+
+  if (statName === 'knowledge' && state.inventory.includes('starter-desk')) {
+    multiplier += 0.05;
+  }
+
+  return Math.round(baseValue * multiplier);
 }
 
 // ---------- Life Event ----------
@@ -149,7 +331,12 @@ function applyChoice(i) {
     state.stats[k] = clamp((state.stats[k] || 50) + v);
   });
 
-  const earnedCoins = Math.floor(Math.random() * 20) + 18;
+  // Tutorial first school/story event adds early knowledge.
+  if (isTutorialActive() && state.tutorial.step === 2) {
+    state.stats.knowledge = clamp((state.stats.knowledge || 0) + 8);
+  }
+
+  const earnedCoins = Math.floor(Math.random() * 20) + 18 + (isTutorialActive() ? 50 : 0);
   const earnedXp = Math.floor(Math.random() * 15) + 12;
 
   addReward(earnedCoins, earnedXp);
@@ -185,8 +372,12 @@ function applyChoice(i) {
   state.lastEventDate = getTodayKey();
   state.day += 1;
 
+  if (isTutorialActive() && state.tutorial.step === 2) {
+    state.tutorial.step = 3;
+  }
+
   createCoinBurst(`+${earnedCoins} 🪙`);
-  showToast('今日人生事件完成 ✨ 明天回来继续成长');
+  showToast(isTutorialActive() ? '第一个人生事件完成！去领取任务奖励吧 ✨' : '今日人生事件完成 ✨ 明天回来继续成长');
 
   save();
   render();
@@ -204,6 +395,8 @@ function analyzeTraits() {
   if (s.goal < 50) arr.push('目标感需要加强');
   if (s.judgment > 62) arr.push('判断力正在提升');
   if (s.saving > 62) arr.push('储蓄稳定');
+  if (s.knowledge >= 20) arr.push('知识成长中');
+  if (s.business >= 20) arr.push('商业潜力出现');
 
   return arr.length ? arr : ['成长状态稳定'];
 }
@@ -272,6 +465,7 @@ function saveReflection() {
 
   state.stats.discipline = clamp(state.stats.discipline + 3);
   state.stats.resilience = clamp(state.stats.resilience + 3);
+  state.petExp += 8;
 
   addReward(25, 18);
 
@@ -282,7 +476,7 @@ function saveReflection() {
   input.value = '';
 
   createCoinBurst('+25 🪙');
-  showToast('今日反思完成，成长值提升 🧠');
+  showToast('今日反思完成，宠物也更了解你了 🧠');
 
   save();
   render();
@@ -316,8 +510,12 @@ function completeQuest(id, reward) {
   addReward(reward, 15);
   state.energy = Math.min(100, state.energy + 10);
 
+  if (isTutorialActive() && state.tutorial.step === 3) {
+    state.tutorial.step = 4;
+  }
+
   createCoinBurst(`+${reward} 🪙`);
-  showToast('任务奖励已领取 🎁');
+  showToast(isTutorialActive() ? '第一次任务奖励已领取！现在去买家具吧 🎁' : '任务奖励已领取 🎁');
 
   save();
   render();
@@ -341,8 +539,17 @@ function buyItem(type, cost) {
     state.houseLevel = Math.min(3, state.houseLevel + 1);
   }
 
+  if (!state.roomItems) state.roomItems = [];
+  if (!['house', 'pet'].includes(type)) {
+    state.roomItems.push(type);
+  }
+
+  if (isTutorialActive() && state.tutorial.step === 4) {
+    state.tutorial.step = 5;
+  }
+
   createCoinBurst(`-${cost} 🪙`);
-  showToast('购买成功！你的城市变丰富了 ✨');
+  showToast(isTutorialActive() ? '家具买好了！去看看成长报告吧 ✨' : '购买成功！你的城市变丰富了 ✨');
 
   save();
   render();
