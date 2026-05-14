@@ -15,6 +15,13 @@ function attachEvents() {
       return;
     }
 
+    const locationTask = e.target.closest('[data-location-task]');
+
+    if (locationTask) {
+      performLocationTask(locationTask.dataset.locationTask);
+      return;
+    }
+
     const choice = e.target.closest('[data-choice]');
 
     if (choice) {
