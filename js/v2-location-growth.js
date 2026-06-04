@@ -503,6 +503,10 @@
     });
   }
 
+  // ── FIX: track which zone is currently open ──────────────────────────────
+  var _currentOpenZoneType = null;
+  // ────────────────────────────────────────────────────────────────────────
+
   window.performLocationTask = function performLocationTask(locationKey) {
     ensureLocationState();
 
@@ -547,6 +551,15 @@
     safeBurst(`+${task.coins} 🪙`);
     safeToast(`${task.name}成长完成：${task.title}`);
     safeSave();
+
+    // ── FIX: immediately re-render hub and active zone ───────────────────
+    injectLocationStyles();
+    refreshLocationHub();
+    if (_currentOpenZoneType) {
+      openGrowthZone(_currentOpenZoneType);
+    }
+    patchReportText();
+    // ────────────────────────────────────────────────────────────────────
 
     if (typeof render === 'function') render();
   };
@@ -612,7 +625,12 @@
       return;
     }
 
-    if (openGrowthZone(type)) return;
+    if (openGrowthZone(type)) {
+      // ── FIX: record which zone is now open ────────────────────────────
+      _currentOpenZoneType = type;
+      // ──────────────────────────────────────────────────────────────────
+      return;
+    }
 
     if (typeof originalOpenZone === 'function') return originalOpenZone(type);
   };
@@ -719,6 +737,11 @@
       ensureLocationState();
       injectLocationStyles();
       refreshLocationHub();
+      // ── FIX: re-render active zone after full render ─────────────────
+      if (_currentOpenZoneType) {
+        openGrowthZone(_currentOpenZoneType);
+      }
+      // ──────────────────────────────────────────────────────────────────
       attachCityStripClicks();
       patchReportText();
     };
