@@ -1,161 +1,218 @@
-/* ═══════════════════════════════════════════════════════════
-   v2-daily-login.js
-   🎁 每日登录礼包 + 连续签到奖励系统
-   - 每次打开 app 自动弹出（每天一次）
-   - Day 1→2→3→7 递增奖励，Day7 = 宝箱
-   - streak 断了：温柔提醒 + 重置，不惩罚
-   依赖: state.js / systems.js / ui.js 已加载
-   ═══════════════════════════════════════════════════════════ */
+// Koin City V2 — Daily Login Reward Patch v1
+// New file: js/v2-daily-login.js
+// Load AFTER js/app.js
 
-/* ── 签到奖励定义 ─────────────────────────────────────────── */
-const loginRewards = [
-  { day: 1,  coins: 50,  xp: 5,  emoji: '🌟', label: '第1天',  special: null },
-  { day: 2,  coins: 80,  xp: 8,  emoji: '💫', label: '第2天',  special: null },
-  { day: 3,  coins: 100, xp: 12, emoji: '⚡', label: '第3天',  special: null },
-  { day: 4,  coins: 100, xp: 12, emoji: '🔥', label: '第4天',  special: null },
-  { day: 5,  coins: 120, xp: 15, emoji: '💎', label: '第5天',  special: null },
-  { day: 6,  coins: 120, xp: 15, emoji: '🏆', label: '第6天',  special: null },
-  { day: 7,  coins: 200, xp: 30, emoji: '📦', label: '第7天',  special: '宝箱！双倍奖励' },
-];
+(function () {
 
-/* ── 扩展 state ───────────────────────────────────────────── */
-function ensureLoginState() {
-  if (!state.login) {
-    state.login = {
-      lastLoginDate: '',   // 'YYYY-MM-DD' 格式
-      loginStreak:   0,    // 连续登录天数
-      totalLogins:   0,    // 历史总登录
-    };
-    save();
-  }
-}
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
-/* ── 今日日期字符串 ───────────────────────────────────────── */
-function todayStr() {
-  return new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
-}
-
-function yesterdayStr() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
-/* ── 今天是否已经签到 ─────────────────────────────────────── */
-function hasClaimedToday() {
-  ensureLoginState();
-  return state.login.lastLoginDate === todayStr();
-}
-
-/* ── 当前连续天数对应的奖励 (循环 7 天) ────────────────────── */
-function getCurrentLoginReward() {
-  ensureLoginState();
-  const idx = ((state.login.loginStreak) % 7); // 0-based → 第 1-7 天
-  return loginRewards[idx] || loginRewards[0];
-}
-
-/* ── 领取今日签到奖励 ─────────────────────────────────────── */
-function claimLoginReward() {
-  ensureLoginState();
-  const reward = getCurrentLoginReward();
-
-  // 更新 streak
-  const last = state.login.lastLoginDate;
-  if (last === yesterdayStr()) {
-    state.login.loginStreak += 1;           // 连续
-  } else if (last !== todayStr()) {
-    state.login.loginStreak = 1;            // 断掉或首次，重新开始
+  function safeSave() {
+    if (typeof save === 'function') save();
   }
 
-  state.login.lastLoginDate = todayStr();
-  state.login.totalLogins  += 1;
+  function safeRender() {
+    if (typeof render === 'function') render();
+  }
 
-  // 发放奖励（宝箱双倍）
-  const multiplier = reward.special ? 2 : 1;
-  addReward(reward.coins * multiplier, reward.xp * multiplier);
+  function safeAddReward(coins, xp) {
+    if (typeof addReward === 'function') {
+      addReward(coins, xp);
+    } else {
+      if (window.state) {
+        state.coins = (state.coins || 0) + coins;
+        state.xp    = (state.xp    || 0) + xp;
+      }
+    }
+  }
 
-  save();
-  render();
+  function safeBurst(msg) {
+    if (typeof createCoinBurst === 'function') createCoinBurst(msg);
+  }
 
-  // 关闭弹窗
-  const popup = document.getElementById('loginPopup');
-  if (popup) popup.remove();
+  function safeToast(msg) {
+    if (typeof showToast === 'function') showToast(msg);
+  }
 
-  createCoinBurst(`+${reward.coins * multiplier} 🪙`);
-  showToast(`🎁 签到奖励已领取！连续 ${state.login.loginStreak} 天`);
-}
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
 
-/* ── 渲染签到弹窗 ─────────────────────────────────────────── */
-function showLoginPopup() {
-  if (hasClaimedToday()) return;             // 今天已领，不弹
-  if (document.getElementById('loginPopup')) return; // 已经存在
+  function yesterdayStr() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
 
-  ensureLoginState();
-  const streak  = state.login.loginStreak;
-  const reward  = getCurrentLoginReward();
-  const multiplier = reward.special ? 2 : 1;
+  // ── Reward Table ──────────────────────────────────────────────────────────
 
-  // 算下一个特殊奖励还差几天
-  const daysToChest = 7 - (streak % 7);
+  const LOGIN_REWARDS = [
+    { day: 1, coins: 50,  xp: 5,  emoji: '🌟', label: '第1天', special: null },
+    { day: 2, coins: 80,  xp: 8,  emoji: '💫', label: '第2天', special: null },
+    { day: 3, coins: 100, xp: 12, emoji: '⚡', label: '第3天', special: null },
+    { day: 4, coins: 100, xp: 12, emoji: '🔥', label: '第4天', special: null },
+    { day: 5, coins: 120, xp: 15, emoji: '💎', label: '第5天', special: null },
+    { day: 6, coins: 120, xp: 15, emoji: '🏆', label: '第6天', special: null },
+    { day: 7, coins: 200, xp: 30, emoji: '📦', label: '第7天', special: '宝箱！双倍奖励' },
+  ];
 
-  // 7格进度格子
-  const slots = loginRewards.map((r, i) => {
-    const dayNum    = i + 1;
-    const claimed   = i < (streak % 7);
-    const isCurrent = i === (streak % 7);
-    return `
-      <div class="lp-slot ${claimed ? 'claimed' : ''} ${isCurrent ? 'current' : ''}">
-        <div class="lp-slot-emoji">${claimed ? '✅' : r.emoji}</div>
-        <div class="lp-slot-label">${r.label}</div>
-        <div class="lp-slot-coins">${r.special ? r.special : '+' + r.coins}</div>
-      </div>`;
-  }).join('');
+  // ── State Init ────────────────────────────────────────────────────────────
 
-  const popup = document.createElement('div');
-  popup.id = 'loginPopup';
-  popup.innerHTML = `
-    <div class="lp-overlay" onclick="document.getElementById('loginPopup').remove()"></div>
-    <div class="lp-card">
+  function ensureLoginState() {
+    if (!window.state) return false;
 
-      <!-- Top glow header -->
-      <div class="lp-header">
-        <div class="lp-header-emoji">${reward.emoji}</div>
-        <div class="lp-header-title">每日登录礼包</div>
-        <div class="lp-streak-pill">🔥 连续 ${Math.max(streak, 0)} 天</div>
-      </div>
+    if (!state.login) {
+      state.login = {
+        lastLoginDate: '',
+        loginStreak:   0,
+        totalLogins:   0,
+      };
+      safeSave();
+    }
 
-      <!-- 7-slot progress strip -->
-      <div class="lp-slots">${slots}</div>
+    if (typeof state.login.lastLoginDate === 'undefined') state.login.lastLoginDate = '';
+    if (typeof state.login.loginStreak   === 'undefined') state.login.loginStreak   = 0;
+    if (typeof state.login.totalLogins   === 'undefined') state.login.totalLogins   = 0;
 
-      <!-- Today's reward highlight -->
-      <div class="lp-today-box">
-        <div class="lp-today-label">今日奖励</div>
-        <div class="lp-today-reward">
-          <span class="lp-today-emoji">${reward.emoji}</span>
-          <span class="lp-today-coins">${reward.special ? '🎁 ' + reward.special : '+' + (reward.coins * multiplier) + ' 🪙'}</span>
-          <span class="lp-today-xp">+${reward.xp * multiplier} XP</span>
+    return true;
+  }
+
+  // ── Logic ─────────────────────────────────────────────────────────────────
+
+  function hasClaimedToday() {
+    if (!ensureLoginState()) return true; // block if state not ready
+    return state.login.lastLoginDate === todayStr();
+  }
+
+  function getCurrentReward() {
+    if (!ensureLoginState()) return LOGIN_REWARDS[0];
+    const idx = (state.login.loginStreak) % 7; // 0-based index into 7-day cycle
+    return LOGIN_REWARDS[idx] || LOGIN_REWARDS[0];
+  }
+
+  // ── Claim Action ──────────────────────────────────────────────────────────
+
+  window.claimLoginReward = function claimLoginReward() {
+    if (!ensureLoginState()) return;
+    if (hasClaimedToday()) return;
+
+    const reward = getCurrentReward();
+
+    // Update streak
+    if (state.login.lastLoginDate === yesterdayStr()) {
+      state.login.loginStreak += 1;
+    } else {
+      state.login.loginStreak = 1; // reset (first time or broken streak)
+    }
+
+    state.login.lastLoginDate = todayStr();
+    state.login.totalLogins  += 1;
+
+    // Double reward on Day 7
+    const multiplier = reward.special ? 2 : 1;
+    const coins      = reward.coins * multiplier;
+    const xp         = reward.xp    * multiplier;
+
+    safeAddReward(coins, xp);
+    safeSave();
+    safeRender();
+
+    // Close popup
+    const popup = document.getElementById('loginPopup');
+    if (popup) popup.remove();
+
+    safeBurst(`+${coins} 🪙`);
+    safeToast(`🎁 签到奖励已领取！连续 ${state.login.loginStreak} 天`);
+  };
+
+  // ── Render Popup ──────────────────────────────────────────────────────────
+
+  function showLoginPopup() {
+    if (hasClaimedToday()) return;
+    if (document.getElementById('loginPopup')) return;
+    if (!ensureLoginState()) return;
+
+    const streak     = state.login.loginStreak;
+    const reward     = getCurrentReward();
+    const multiplier = reward.special ? 2 : 1;
+    const daysToChest = 7 - (streak % 7);
+
+    // 7-slot strip
+    const slots = LOGIN_REWARDS.map((r, i) => {
+      const claimed   = i < (streak % 7);
+      const isCurrent = i === (streak % 7);
+      return `
+        <div class="lp-slot ${claimed ? 'claimed' : ''} ${isCurrent ? 'current' : ''}">
+          <div class="lp-slot-emoji">${claimed ? '✅' : r.emoji}</div>
+          <div class="lp-slot-label">${r.label}</div>
+          <div class="lp-slot-coins">${r.special ? r.special : '+' + r.coins}</div>
+        </div>`;
+    }).join('');
+
+    const popup = document.createElement('div');
+    popup.id = 'loginPopup';
+    popup.innerHTML = `
+      <div class="lp-overlay" id="lpOverlay"></div>
+      <div class="lp-card">
+
+        <div class="lp-header">
+          <div class="lp-header-emoji">${reward.emoji}</div>
+          <div class="lp-header-title">每日登录礼包</div>
+          <div class="lp-streak-pill">🔥 连续 ${Math.max(streak, 0)} 天</div>
         </div>
-        ${daysToChest <= 7 && !reward.special
-          ? `<div class="lp-chest-hint">再签到 <b>${daysToChest}</b> 天可以领宝箱 📦</div>`
-          : ''}
+
+        <div class="lp-slots">${slots}</div>
+
+        <div class="lp-today-box">
+          <div class="lp-today-label">今日奖励</div>
+          <div class="lp-today-reward">
+            <span class="lp-today-emoji">${reward.emoji}</span>
+            <span class="lp-today-coins">
+              ${reward.special ? '🎁 ' + reward.special : '+' + (reward.coins * multiplier) + ' 🪙'}
+            </span>
+            <span class="lp-today-xp">+${reward.xp * multiplier} XP</span>
+          </div>
+          ${!reward.special
+            ? `<div class="lp-chest-hint">再签到 <b>${daysToChest}</b> 天可以领宝箱 📦</div>`
+            : ''}
+        </div>
+
+        <button class="lp-claim-btn" id="lpClaimBtn">🎁 领取今日奖励</button>
+        <div class="lp-skip" id="lpSkip">稍后再领</div>
+
       </div>
+    `;
 
-      <!-- CTA -->
-      <button class="lp-claim-btn" onclick="claimLoginReward()">
-        🎁 领取今日奖励
-      </button>
+    document.body.appendChild(popup);
 
-      <div class="lp-skip" onclick="document.getElementById('loginPopup').remove()">
-        稍后再领
-      </div>
-    </div>
-  `;
-  document.body.appendChild(popup);
-}
+    // Events via JS (no inline onclick)
+    document.getElementById('lpClaimBtn').addEventListener('click', function () {
+      window.claimLoginReward();
+    });
 
-/* ── App 启动时自动触发 ────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-  ensureLoginState();
-  // 延迟 800ms，等页面渲染完
-  setTimeout(showLoginPopup, 800);
-});
+    document.getElementById('lpSkip').addEventListener('click', function () {
+      const p = document.getElementById('loginPopup');
+      if (p) p.remove();
+    });
+
+    document.getElementById('lpOverlay').addEventListener('click', function () {
+      const p = document.getElementById('loginPopup');
+      if (p) p.remove();
+    });
+  }
+
+  // ── Boot: show popup on load ──────────────────────────────────────────────
+
+  function boot() {
+    ensureLoginState();
+    setTimeout(showLoginPopup, 800);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+  console.log('[Koin City V2] Daily Login Reward Patch v1 loaded');
+
+})();
