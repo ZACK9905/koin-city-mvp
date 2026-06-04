@@ -92,6 +92,8 @@ const defaultState = {
 
 let state = loadState();
 
+window.state = state;
+
 let mapDrag = {
   ready: false,
   dragging: false,
