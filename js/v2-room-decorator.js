@@ -606,21 +606,7 @@
       const svg = tmp.firstElementChild;
       canvas.appendChild(svg);
       _attachSVGEvents(svg);
-      // Add existing pieces
-      const layer = svg.querySelector('#furnitureLayer');
-if (!layer) return;
-
-layer.innerHTML = '';
-
-Object.entries(pl).forEach(([key, type]) => {
-  const [c, r] = key.split(',').map(Number);
-
-  const piece = _buildPieceSVGEl(key, type, c, r);
-  if (!piece) return;
-
-  layer.appendChild(piece);
-  _attachPieceEvent(piece);
-});
+      // nothing — furniture is handled by _diffSVG
 
     // Picker item events
     body.querySelectorAll('.koin-dec-item').forEach(item => {
