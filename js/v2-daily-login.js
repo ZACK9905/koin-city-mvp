@@ -34,26 +34,37 @@
   }
 
   function todayStr() {
-    return new Date().toISOString().slice(0, 10);
-  }
+  const now = new Date();
 
-  function yesterdayStr() {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  }
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+
+  return `${y}-${m}-${d}`;
+}
+
+function yesterdayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+
+  return `${y}-${m}-${day}`;
+}
 
   // ── Reward Table ──────────────────────────────────────────────────────────
 
   const LOGIN_REWARDS = [
-    { day: 1, coins: 50,  xp: 5,  emoji: '🌟', label: '第1天', special: null },
-    { day: 2, coins: 80,  xp: 8,  emoji: '💫', label: '第2天', special: null },
-    { day: 3, coins: 100, xp: 12, emoji: '⚡', label: '第3天', special: null },
-    { day: 4, coins: 100, xp: 12, emoji: '🔥', label: '第4天', special: null },
-    { day: 5, coins: 120, xp: 15, emoji: '💎', label: '第5天', special: null },
-    { day: 6, coins: 120, xp: 15, emoji: '🏆', label: '第6天', special: null },
-    { day: 7, coins: 200, xp: 30, emoji: '📦', label: '第7天', special: '宝箱！双倍奖励' },
-  ];
+  { day: 1, coins: 100, xp: 10, emoji: '🌟', label: '第1天', special: null },
+  { day: 2, coins: 150, xp: 15, emoji: '💫', label: '第2天', special: null },
+  { day: 3, coins: 200, xp: 20, emoji: '⚡', label: '第3天', special: null },
+  { day: 4, coins: 250, xp: 25, emoji: '🔥', label: '第4天', special: null },
+  { day: 5, coins: 300, xp: 30, emoji: '💎', label: '第5天', special: null },
+  { day: 6, coins: 400, xp: 40, emoji: '🏆', label: '第6天', special: null },
+  { day: 7, coins: 500, xp: 50, emoji: '📦', label: '第7天', special: '成长宝箱' }
+];
 
   // ── State Init ────────────────────────────────────────────────────────────
 
@@ -113,6 +124,26 @@
     const xp         = reward.xp    * multiplier;
 
     safeAddReward(coins, xp);
+    if (!state.stats) state.stats = {};
+
+const growthRewards = [
+  'discipline',
+  'saving',
+  'judgment',
+  'resilience',
+  'knowledge',
+  'social',
+  'confidence'
+];
+
+const rewardStat =
+  growthRewards[(state.login.loginStreak - 1) % 7];
+
+state.stats[rewardStat] =
+  Math.min(
+    100,
+    (state.stats[rewardStat] || 0) + 1
+  );
     safeSave();
     safeRender();
 
@@ -121,8 +152,9 @@
     if (popup) popup.remove();
 
     safeBurst(`+${coins} 🪙`);
-    safeToast(`🎁 签到奖励已领取！连续 ${state.login.loginStreak} 天`);
-  };
+    safeToast(
+  `🎁 签到成功！获得 ${coins} 金币、${xp} XP，并提升了成长能力！`
+);
 
   // ── Render Popup ──────────────────────────────────────────────────────────
 
@@ -131,15 +163,16 @@
     if (document.getElementById('loginPopup')) return;
     if (!ensureLoginState()) return;
 
-    const streak     = state.login.loginStreak;
+   const streak = state.login.loginStreak || 0;
+    const cycleDay = (streak % 7);
     const reward     = getCurrentReward();
     const multiplier = reward.special ? 2 : 1;
     const daysToChest = 7 - (streak % 7);
 
     // 7-slot strip
     const slots = LOGIN_REWARDS.map((r, i) => {
-      const claimed   = i < (streak % 7);
-      const isCurrent = i === (streak % 7);
+      const claimed = i < cycleDay;
+      const isCurrent = i === cycleDay;
       return `
         <div class="lp-slot ${claimed ? 'claimed' : ''} ${isCurrent ? 'current' : ''}">
           <div class="lp-slot-emoji">${claimed ? '✅' : r.emoji}</div>
