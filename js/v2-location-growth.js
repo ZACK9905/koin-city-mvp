@@ -642,8 +642,6 @@
       ${renderCurrentStats()}
       ${renderLocationButtons(['school','library','gym','studio','park','social'])}
       <div style="margin-top:14px">
-        <h3 style="font-size:15px;margin-bottom:8px">🚀 职业路线预览</h3>
-        ${renderCareerPreview()}
       </div>
     `;
 
