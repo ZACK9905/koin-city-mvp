@@ -156,6 +156,8 @@ state.stats[rewardStat] =
   `🎁 签到成功！获得 ${coins} 金币、${xp} XP，并提升了成长能力！`
 );
 
+} // claimLoginReward 结束
+
   // ── Render Popup ──────────────────────────────────────────────────────────
 
   function showLoginPopup() {
