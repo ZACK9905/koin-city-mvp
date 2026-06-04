@@ -375,31 +375,8 @@
     }
   };
 
-  window.careerPaths = [
-    { emoji: '🏋️', name: '健身教练 / 运动员', requirements: { discipline: 80, fitness: 70 }, benefit: '解锁运动挑战与健康类收入' },
-    { emoji: '🎮', name: '游戏设计师', requirements: { creativity: 80, judgment: 70 }, benefit: '解锁创作室高级任务' },
-    { emoji: '🧑‍💼', name: '创业家', requirements: { business: 85, resilience: 80 }, benefit: '解锁创业中心高级收入' },
-    { emoji: '🤖', name: 'AI 工程师', requirements: { knowledge: 90, discipline: 75 }, benefit: '解锁未来都市科技任务' },
-    { emoji: '🏠', name: '房地产达人', requirements: { judgment: 90, social: 70 }, benefit: '解锁资产与租金事件' },
-    { emoji: '🎬', name: '内容创作者', requirements: { creativity: 85, social: 75 }, benefit: '解锁社交区影响力任务' }
-  ];
-
-  window.getCareerProgress = function getCareerProgress(job) {
-    ensureLocationState();
-
-    const missing = [];
-    let unlocked = true;
-
-    Object.entries(job.requirements).forEach(([stat, req]) => {
-      const current = state.stats[stat] || 0;
-      if (current < req) {
-        unlocked = false;
-        missing.push({ stat, current, req, need: req - current });
-      }
-    });
-
-    return { unlocked, missing };
-  };
+  // window.careerPaths and window.getCareerProgress are defined exclusively
+  // in v2-career-unlock.js — removed here to avoid conflicts.
 
   function renderCurrentStats() {
     ensureLocationState();
@@ -479,12 +456,23 @@
   function renderCareerPreview() {
     ensureLocationState();
 
+    // Delegate to v2-career-unlock.js — use getCareers() if available
+    const careers = (typeof getCareers === 'function')
+      ? getCareers()
+      : (Array.isArray(window.careerPaths) ? window.careerPaths : []);
+
+    const progressFn = (typeof window.getCareerProgress === 'function')
+      ? window.getCareerProgress
+      : function () { return { unlocked: false, missing: [] }; };
+
+    if (!careers.length) return '';
+
     return `<div style="display:grid;gap:10px;margin-top:12px">
-      ${careerPaths.map(job => {
-        const progress = getCareerProgress(job);
+      ${careers.map(job => {
+        const progress = progressFn(job);
         const missingText = progress.unlocked
           ? '✅ 已达到条件'
-          : progress.missing.map(m => `${statLabel(m.stat)} 还差 ${m.need}`).join(' · ');
+          : (progress.missing || []).map(m => `${statLabel(m.stat)} 还差 ${m.need}`).join(' · ');
 
         return `<div style="background:#fff;border-radius:14px;padding:12px;border:1px solid rgba(124,92,252,.14)">
           <strong>${job.emoji} ${job.name}</strong>
@@ -703,7 +691,13 @@
     if (lifeSummary && !lifeSummary.dataset.koinLocationAdded) {
       lifeSummary.dataset.koinLocationAdded = '1';
 
-      const unlocked = careerPaths.filter(job => getCareerProgress(job).unlocked);
+      const _careers = (typeof getCareers === 'function')
+        ? getCareers()
+        : (Array.isArray(window.careerPaths) ? window.careerPaths : []);
+      const _progressFn = (typeof window.getCareerProgress === 'function')
+        ? window.getCareerProgress
+        : function () { return { unlocked: false, missing: [] }; };
+      const unlocked = _careers.filter(job => _progressFn(job).unlocked);
       const careerText = unlocked.length
         ? `已解锁职业方向：${unlocked.map(j => `${j.emoji}${j.name}`).join('、')}`
         : '继续提升知识、创意、活力、沟通和商业能力，就会逐步接近不同职业路线。';
