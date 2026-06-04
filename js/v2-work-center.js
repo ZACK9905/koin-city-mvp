@@ -1,10 +1,10 @@
-// Koin City V2 — Work Center Patch v1
+// Koin City V2 — Work Center Patch v2
 // New file: js/v2-work-center.js
-// Load AFTER js/v2-room-upgrade.js
+// Load AFTER js/v2-career-unlock.js
 
 (function () {
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   function $safe(id) { return document.getElementById(id); }
 
@@ -31,62 +31,59 @@
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 
-  // ── Daily Salary Table ────────────────────────────────────────────────────
-  // Keyed by career id from v2-career-unlock.js
+  // ── Salary per career id ──────────────────────────────────────────────────
+  // Keys match career ids in v2-career-unlock.js
 
   const DAILY_SALARY = {
-    fitness_coach:    { amount: 220, label: '健身教练',   emoji: '🏋️' },
-    game_designer:    { amount: 260, label: '游戏设计师', emoji: '🎮' },
-    entrepreneur:     { amount: 350, label: '创业家',     emoji: '🧑‍💼' },
-    ai_engineer:      { amount: 320, label: 'AI 工程师',  emoji: '🤖' },
-    property_expert:  { amount: 330, label: '房地产达人', emoji: '🏠' },
-    content_creator:  { amount: 280, label: '内容创作者', emoji: '🎬' }
+    fitness_coach:   { amount: 220, emoji: '🏋️' },
+    game_designer:   { amount: 260, emoji: '🎮' },
+    entrepreneur:    { amount: 350, emoji: '🧑‍💼' },
+    ai_engineer:     { amount: 320, emoji: '🤖' },
+    property_expert: { amount: 330, emoji: '🏠' },
+    content_creator: { amount: 280, emoji: '🎬' },
   };
 
-  // ── Streak Bonus Table ────────────────────────────────────────────────────
+  // ── 7-day streak bonus table ──────────────────────────────────────────────
 
   const STREAK_BONUSES = [
-    { day: 1,  bonus: 50,  label: '第1天',  special: false },
-    { day: 2,  bonus: 80,  label: '第2天',  special: false },
-    { day: 3,  bonus: 100, label: '第3天',  special: false },
-    { day: 4,  bonus: 100, label: '第4天',  special: false },
-    { day: 5,  bonus: 120, label: '第5天',  special: false },
-    { day: 6,  bonus: 120, label: '第6天',  special: false },
-    { day: 7,  bonus: 0,   label: '第7天',  special: true  }  // chest reward
+    { day: 1, bonus: 50,  label: 'Day 1', special: false },
+    { day: 2, bonus: 80,  label: 'Day 2', special: false },
+    { day: 3, bonus: 100, label: 'Day 3', special: false },
+    { day: 4, bonus: 100, label: 'Day 4', special: false },
+    { day: 5, bonus: 120, label: 'Day 5', special: false },
+    { day: 6, bonus: 120, label: 'Day 6', special: false },
+    { day: 7, bonus: 0,   label: 'Day 7', special: true  },
   ];
 
-  const STREAK_CHEST_REWARD = { coins: 300, xp: 50 };
+  const CHEST_REWARD = { coins: 300, xp: 50 };
 
-  // ── State Init ────────────────────────────────────────────────────────────
+  // ── State init ────────────────────────────────────────────────────────────
 
   function ensureWorkState() {
     if (!window.state) return false;
 
     if (!state.work) {
       state.work = {
-        lastWorkDate:   null,   // date string of last salary claim
-        workStreak:     0,      // consecutive work days
-        totalEarned:    0,      // lifetime salary coins
-        chestClaimed:   []      // array of streak-cycle numbers that got chest
+        lastWorkDate: null,
+        workStreak:   0,
+        totalEarned:  0,
+        chestClaimed: []
       };
     }
 
-    // Safety: fill missing fields for older saves
-    if (typeof state.work.lastWorkDate  === 'undefined') state.work.lastWorkDate  = null;
-    if (typeof state.work.workStreak    === 'undefined') state.work.workStreak    = 0;
-    if (typeof state.work.totalEarned   === 'undefined') state.work.totalEarned   = 0;
-    if (!Array.isArray(state.work.chestClaimed))         state.work.chestClaimed  = [];
+    if (typeof state.work.lastWorkDate === 'undefined') state.work.lastWorkDate = null;
+    if (typeof state.work.workStreak   === 'undefined') state.work.workStreak   = 0;
+    if (typeof state.work.totalEarned  === 'undefined') state.work.totalEarned  = 0;
+    if (!Array.isArray(state.work.chestClaimed))        state.work.chestClaimed = [];
 
     return true;
   }
 
-  // ── Career Helpers ────────────────────────────────────────────────────────
-  // Read from v2-career-unlock.js safely
+  // ── Career helpers ────────────────────────────────────────────────────────
 
   function getSelectedCareer() {
     if (!window.state || !state.careers || !state.careers.selected) return null;
     if (typeof getCareers !== 'function') return null;
-
     return getCareers().find(c => c.id === state.careers.selected) || null;
   }
 
@@ -94,7 +91,6 @@
     if (!window.state || !state.careers) return [];
     if (typeof getCareers !== 'function') return [];
     if (!Array.isArray(state.careers.unlocked)) return [];
-
     return getCareers().filter(c => state.careers.unlocked.includes(c.id));
   }
 
@@ -103,65 +99,57 @@
     return Array.isArray(state.careers.unlocked) && state.careers.unlocked.includes(careerId);
   }
 
-  // ── Work Actions ──────────────────────────────────────────────────────────
+  // ── Claim salary ──────────────────────────────────────────────────────────
 
-  window.claimDailySalary = function claimDailySalary() {
+  window.claimDailySalary = function () {
     if (!ensureWorkState()) return;
 
     const career = getSelectedCareer();
+
     if (!career) {
-      alert('还没有选择追踪的职业。\n\n先去 Career Center 解锁并追踪一个职业方向，才可以上班领薪资。');
+      safeToast('先去 Career Center 追踪一个职业，才可以上班！');
       return;
     }
 
     if (!isCareerUnlocked(career.id)) {
-      alert(`${career.name} 还没有解锁。\n\n继续提升相关能力，达到条件后才能开始上班。`);
+      safeToast(`${career.name} 还没解锁，继续提升能力吧！`);
       return;
     }
 
     const today = todayKey();
     if (state.work.lastWorkDate === today) {
-      safeToast('今天已经上班了。明天回来再领薪资！');
+      safeToast('今天已经上班了，明天再来！💼');
       return;
     }
 
-    // Calculate streak
-    const yesterday = yesterdayKey();
-    if (state.work.lastWorkDate === yesterday) {
+    // Update streak
+    if (state.work.lastWorkDate === yesterdayKey()) {
       state.work.workStreak += 1;
-    } else if (state.work.lastWorkDate !== today) {
-      // Streak broken (or first time)
+    } else {
       state.work.workStreak = 1;
     }
-
     state.work.lastWorkDate = today;
 
-    // Base salary
-    const salaryDef = DAILY_SALARY[career.id];
-    const baseSalary = salaryDef ? salaryDef.amount : 200;
+    // Salary
+    const salDef      = DAILY_SALARY[career.id];
+    const baseSalary  = salDef ? salDef.amount : 200;
+    const streakPos   = (state.work.workStreak - 1) % 7;
+    const streakEntry = STREAK_BONUSES[streakPos];
+    const bonus       = streakEntry ? streakEntry.bonus : 0;
+    const isChestDay  = streakEntry ? streakEntry.special : false;
+    const cycleNum    = Math.floor((state.work.workStreak - 1) / 7);
 
-    // Streak bonus (1-indexed: streak day within current 7-day cycle)
-    const streakDay    = ((state.work.workStreak - 1) % 7) + 1;
-    const streakEntry  = STREAK_BONUSES[streakDay - 1];
-    const streakBonus  = streakEntry ? streakEntry.bonus : 0;
-    const isChestDay   = streakEntry ? streakEntry.special : false;
-
-    // Current cycle number (how many full 7-day cycles completed)
-    const cycleNum = Math.floor((state.work.workStreak - 1) / 7);
-
-    let totalCoins = baseSalary + streakBonus;
+    let totalCoins = baseSalary + bonus;
     let totalXp    = 20;
-    let chestMsg   = '';
+    let extraMsg   = '';
 
-    // Chest reward on day 7 of each cycle (if not already claimed this cycle)
     if (isChestDay && !state.work.chestClaimed.includes(cycleNum)) {
       state.work.chestClaimed.push(cycleNum);
-      totalCoins += STREAK_CHEST_REWARD.coins;
-      totalXp    += STREAK_CHEST_REWARD.xp;
-      chestMsg    = ` + 🎁 连续7天宝箱 +${STREAK_CHEST_REWARD.coins}🪙！`;
+      totalCoins += CHEST_REWARD.coins;
+      totalXp    += CHEST_REWARD.xp;
+      extraMsg    = ` + 🎁 宝箱 +${CHEST_REWARD.coins}🪙`;
     }
 
-    // Apply reward
     if (typeof addReward === 'function') {
       addReward(totalCoins, totalXp);
     } else {
@@ -172,83 +160,108 @@
     state.work.totalEarned = (state.work.totalEarned || 0) + totalCoins;
 
     safeBurst(`+${totalCoins} 🪙`);
-    safeToast(`${career.emoji || '💼'} 今日薪资 +${baseSalary}${streakBonus ? ` + 连续奖励 +${streakBonus}` : ''}${chestMsg}`);
-    safeSave();
+    safeToast(
+      `${career.emoji || '💼'} 薪资 +${baseSalary}` +
+      (bonus ? ` · 连续奖励 +${bonus}` : '') +
+      extraMsg
+    );
 
+    safeSave();
     if (typeof render === 'function') render();
   };
 
-  window.selectCareerFromWork = function selectCareerFromWork(careerId) {
-    if (typeof selectCareer === 'function') {
-      selectCareer(careerId);
-    }
+  window.selectCareerFromWork = function (careerId) {
+    if (typeof selectCareer === 'function') selectCareer(careerId);
   };
 
   // ── Styles ────────────────────────────────────────────────────────────────
 
   function injectWorkStyles() {
-    const old = document.getElementById('koinWorkCenterStyles');
-    if (old) old.remove();
+    if ($safe('koinWorkStyles')) return;
 
     const style = document.createElement('style');
-    style.id = 'koinWorkCenterStyles';
+    style.id = 'koinWorkStyles';
     style.textContent = `
-      /* ── Work Center Hub ── */
-      #workCenterHub {
-        margin: 0 16px 16px;
-      }
+      #workCenterHub { margin: 14px 16px; }
 
-      .koin-work-hero {
+      .kwc-hero {
         background: linear-gradient(145deg, #0f2027, #203a43, #2c5364);
         border-radius: 26px 26px 0 0;
         padding: 20px;
         position: relative;
         overflow: hidden;
       }
-
-      .koin-work-hero::after {
+      .kwc-hero::after {
         content: '';
         position: absolute;
         width: 160px; height: 160px;
         border-radius: 50%;
-        background: rgba(255,255,255,.06);
-        right: -40px; bottom: -50px;
+        background: rgba(255,255,255,.07);
+        right: -50px; bottom: -60px;
       }
-
-      .koin-work-hero-row {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        position: relative;
-        z-index: 1;
+      .kwc-hero-row {
+        display: flex; align-items: center; gap: 14px;
+        position: relative; z-index: 1;
       }
-
-      .koin-work-icon {
-        width: 56px; height: 56px;
-        border-radius: 18px;
+      .kwc-hero-icon {
+        width: 52px; height: 52px; border-radius: 18px;
         background: rgba(255,255,255,.13);
-        border: 1.5px solid rgba(255,255,255,.2);
+        border: 1.5px solid rgba(255,255,255,.22);
         display: flex; align-items: center; justify-content: center;
-        font-size: 30px;
-        flex-shrink: 0;
+        font-size: 28px; flex-shrink: 0;
+      }
+      .kwc-hero h2 { color: #fff; font-size: 17px; font-weight: 900; margin: 0 0 4px; }
+      .kwc-hero p  { color: rgba(255,255,255,.72); font-size: 12px; line-height: 1.5; margin: 0; }
+
+      .kwc-salary-strip {
+        position: relative; z-index: 1;
+        margin-top: 16px;
+        background: rgba(255,255,255,.10);
+        border: 1.5px solid rgba(255,255,255,.18);
+        border-radius: 18px;
+        padding: 12px 14px;
+        display: flex; align-items: center;
+        justify-content: space-between; gap: 12px;
+      }
+      .kwc-salary-meta  { flex: 1; min-width: 0; }
+      .kwc-salary-amount {
+        font-size: 26px; font-weight: 1000;
+        color: #FFD23F; line-height: 1;
+      }
+      .kwc-salary-amount small {
+        font-size: 13px; color: rgba(255,255,255,.55); font-weight: 700;
+      }
+      .kwc-salary-sub {
+        font-size: 11px; color: rgba(255,255,255,.6);
+        font-weight: 800; margin-top: 3px;
       }
 
-      .koin-work-hero h2 {
-        color: #fff;
-        font-size: 17px;
-        font-weight: 900;
-        margin: 0 0 4px;
+      .kwc-claim-btn {
+        all: unset; box-sizing: border-box;
+        padding: 12px 20px; border-radius: 14px;
+        background: linear-gradient(135deg, #FFD23F, #FF8C42);
+        color: #fff; font-size: 14px; font-weight: 900;
+        cursor: pointer; flex-shrink: 0; white-space: nowrap;
+        box-shadow: 0 6px 18px rgba(255,140,66,.4);
+        transition: transform .15s, box-shadow .15s;
+        animation: kwcPulse 1.8s ease-in-out infinite;
+      }
+      .kwc-claim-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 26px rgba(255,140,66,.55);
+      }
+      .kwc-claim-btn.done {
+        background: rgba(255,255,255,.18);
+        color: rgba(255,255,255,.5);
+        box-shadow: none; cursor: default;
+        transform: none; animation: none;
+      }
+      @keyframes kwcPulse {
+        0%,100% { box-shadow: 0 6px 18px rgba(255,140,66,.4); }
+        50%      { box-shadow: 0 6px 28px rgba(255,140,66,.7); }
       }
 
-      .koin-work-hero p {
-        color: rgba(255,255,255,.72);
-        font-size: 12px;
-        line-height: 1.5;
-        margin: 0;
-      }
-
-      /* ── Salary card ── */
-      .koin-work-body {
+      .kwc-body {
         background: #fff;
         border-radius: 0 0 26px 26px;
         border: 1.5px solid rgba(124,92,252,.12);
@@ -257,381 +270,221 @@
         box-shadow: 0 8px 28px rgba(124,92,252,.08);
       }
 
-      .koin-work-salary-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 14px;
+      .kwc-done-note {
+        background: rgba(114,225,40,.12);
+        border-radius: 12px; padding: 8px 12px;
+        font-size: 12px; font-weight: 800; color: #2d6a19;
+        margin-bottom: 14px; display: none;
       }
+      .kwc-done-note.visible { display: block; }
 
-      .koin-work-salary-info {
-        flex: 1;
-        min-width: 0;
+      .kwc-streak-label {
+        font-size: 13px; font-weight: 900; margin-bottom: 10px;
+        display: flex; align-items: center; gap: 8px;
       }
+      .kwc-streak-label span { font-size: 11px; color: var(--muted,#756e83); font-weight: 700; }
 
-      .koin-work-salary-amount {
-        font-size: 28px;
-        font-weight: 1000;
-        color: var(--violet, #7C5CFC);
-        line-height: 1;
-      }
+      .kwc-streak-row { display: flex; gap: 5px; align-items: flex-end; }
 
-      .koin-work-salary-label {
-        font-size: 11px;
-        color: var(--muted, #756e83);
-        font-weight: 800;
-        margin-top: 3px;
-      }
+      .kwc-streak-slot { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 
-      .koin-work-claim-btn {
-        all: unset;
-        box-sizing: border-box;
-        padding: 13px 20px;
-        border-radius: 16px;
-        background: linear-gradient(135deg, #7C5CFC, #FF8C42);
-        color: #fff;
-        font-size: 14px;
-        font-weight: 900;
-        cursor: pointer;
-        box-shadow: 0 6px 18px rgba(124,92,252,.28);
-        transition: transform .15s, box-shadow .15s;
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-
-      .koin-work-claim-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 26px rgba(124,92,252,.38);
-      }
-
-      .koin-work-claim-btn.done {
-        background: linear-gradient(135deg, #b0a8c8, #c9b99a);
-        box-shadow: none;
-        cursor: default;
-        transform: none;
-      }
-
-      .koin-work-done-note {
-        font-size: 12px;
-        color: #2d6a19;
-        font-weight: 800;
-        background: rgba(114,225,40,.14);
-        border-radius: 10px;
-        padding: 7px 10px;
-        margin-bottom: 14px;
-        display: none;
-      }
-
-      .koin-work-done-note.visible { display: block; }
-
-      /* ── Streak bar ── */
-      .koin-work-streak-title {
-        font-size: 13px;
-        font-weight: 900;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .koin-work-streak-row {
-        display: flex;
-        gap: 6px;
-        align-items: flex-end;
-      }
-
-      .koin-work-streak-day {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-      }
-
-      .koin-work-streak-bubble {
-        width: 36px; height: 36px;
+      .kwc-streak-bubble {
+        width: 100%; aspect-ratio: 1;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        font-size: 13px;
-        font-weight: 900;
-        border: 2px solid rgba(124,92,252,.15);
-        background: rgba(124,92,252,.06);
-        color: var(--muted, #756e83);
+        font-size: 11px; font-weight: 900;
+        border: 2px solid rgba(124,92,252,.14);
+        background: rgba(124,92,252,.05);
+        color: var(--muted,#756e83);
         transition: all .2s;
       }
-
-      .koin-work-streak-bubble.done {
-        background: linear-gradient(135deg, #7C5CFC, #FF8C42);
-        color: #fff;
-        border-color: transparent;
+      .kwc-streak-bubble.done {
+        background: linear-gradient(135deg,#7C5CFC,#FF8C42);
+        color: #fff; border-color: transparent;
         box-shadow: 0 3px 10px rgba(124,92,252,.28);
       }
-
-      .koin-work-streak-bubble.today {
-        background: linear-gradient(135deg, #72E128, #06C8A8);
-        color: #fff;
-        border-color: transparent;
-        box-shadow: 0 3px 10px rgba(114,225,40,.30);
-        animation: koinWorkPulse 1.5s ease-in-out infinite;
+      .kwc-streak-bubble.today {
+        background: linear-gradient(135deg,#72E128,#06C8A8);
+        color: #fff; border-color: transparent;
+        box-shadow: 0 3px 10px rgba(114,225,40,.32);
+        animation: kwcSlotPulse 1.5s ease-in-out infinite;
+      }
+      .kwc-streak-bubble.chest { font-size: 16px; }
+      @keyframes kwcSlotPulse {
+        0%,100% { transform: scale(1); }
+        50%      { transform: scale(1.1); }
+      }
+      .kwc-streak-day-lbl {
+        font-size: 8.5px; font-weight: 900;
+        color: var(--muted,#756e83); text-align: center;
+      }
+      .kwc-streak-bonus-lbl {
+        font-size: 8.5px; font-weight: 900;
+        color: var(--violet,#7C5CFC); text-align: center;
       }
 
-      .koin-work-streak-bubble.chest {
-        font-size: 18px;
-      }
-
-      .koin-work-streak-label {
-        font-size: 9px;
-        font-weight: 900;
-        color: var(--muted, #756e83);
-        text-align: center;
-      }
-
-      .koin-work-streak-bonus {
-        font-size: 9px;
-        font-weight: 900;
-        color: var(--violet, #7C5CFC);
-        text-align: center;
-      }
-
-      @keyframes koinWorkPulse {
-        0%, 100% { transform: scale(1); }
-        50%       { transform: scale(1.08); }
-      }
-
-      /* ── Unlocked careers list ── */
-      .koin-work-careers {
-        margin-top: 14px;
-        display: grid;
-        gap: 8px;
-      }
-
-      .koin-work-career-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 11px 12px;
-        border-radius: 16px;
+      .kwc-careers-label { font-size: 13px; font-weight: 900; margin: 14px 0 8px; }
+      .kwc-career-list   { display: grid; gap: 8px; }
+      .kwc-career-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 11px 12px; border-radius: 16px;
         border: 1.5px solid rgba(124,92,252,.12);
-        background: linear-gradient(145deg, #fff, #f9f6ff);
+        background: linear-gradient(145deg,#fff,#f9f6ff);
         cursor: pointer;
         transition: border-color .15s, box-shadow .15s;
       }
+      .kwc-career-row:hover { border-color: rgba(124,92,252,.3); box-shadow: 0 4px 14px rgba(124,92,252,.10); }
+      .kwc-career-row.active { border-color: rgba(114,225,40,.45); background: linear-gradient(145deg,#fff,#f4fff0); }
+      .kwc-career-emoji { font-size: 24px; width: 36px; text-align: center; flex-shrink: 0; }
+      .kwc-career-info  { flex: 1; min-width: 0; }
+      .kwc-career-name  { font-size: 13px; font-weight: 900; }
+      .kwc-career-sal   { font-size: 11px; color: var(--violet,#7C5CFC); font-weight: 800; margin-top: 2px; }
+      .kwc-career-badge {
+        font-size: 10px; font-weight: 900;
+        padding: 4px 9px; border-radius: 999px; flex-shrink: 0;
+        background: rgba(124,92,252,.10); color: var(--violet,#7C5CFC);
+      }
+      .kwc-career-badge.active { background: rgba(114,225,40,.18); color: #2d6a19; }
 
-      .koin-work-career-row:hover {
-        border-color: rgba(124,92,252,.30);
-        box-shadow: 0 4px 14px rgba(124,92,252,.10);
+      .kwc-empty {
+        text-align: center; padding: 18px 12px;
+        font-size: 13px; color: var(--muted,#756e83);
+        font-weight: 700; line-height: 1.6;
       }
 
-      .koin-work-career-row.selected {
-        border-color: rgba(114,225,40,.50);
-        background: linear-gradient(145deg, #fff, #f4fff0);
+      .kwc-total {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-top: 14px; padding: 10px 14px;
+        border-radius: 14px; background: rgba(124,92,252,.06);
+        font-size: 12px; font-weight: 900;
       }
-
-      .koin-work-career-emoji {
-        font-size: 24px;
-        width: 38px;
-        text-align: center;
-        flex-shrink: 0;
-      }
-
-      .koin-work-career-info {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .koin-work-career-name {
-        font-size: 13px;
-        font-weight: 900;
-        line-height: 1.2;
-      }
-
-      .koin-work-career-salary {
-        font-size: 11px;
-        color: var(--violet, #7C5CFC);
-        font-weight: 800;
-        margin-top: 2px;
-      }
-
-      .koin-work-career-badge {
-        font-size: 10px;
-        font-weight: 900;
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: rgba(114,225,40,.18);
-        color: #2d6a19;
-        flex-shrink: 0;
-      }
-
-      .koin-work-career-badge.tracked {
-        background: rgba(255,140,66,.18);
-        color: #8a4000;
-      }
-
-      /* ── No career state ── */
-      .koin-work-empty {
-        text-align: center;
-        padding: 20px 16px;
-        color: var(--muted, #756e83);
-        font-size: 13px;
-        line-height: 1.6;
-        font-weight: 700;
-      }
-
-      .koin-work-total-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 14px;
-        border-radius: 14px;
-        background: rgba(124,92,252,.06);
-        margin-top: 14px;
-        font-size: 12px;
-        font-weight: 900;
-        color: var(--ink, #1A1034);
-      }
-
-      .koin-work-total-num {
-        color: var(--violet, #7C5CFC);
-        font-size: 15px;
-      }
+      .kwc-total span { font-size: 15px; color: var(--violet,#7C5CFC); }
     `;
     document.head.appendChild(style);
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Build HTML ────────────────────────────────────────────────────────────
 
-  function renderWorkCenter() {
+  function buildWorkHub() {
     if (!ensureWorkState()) return '';
 
-    const today         = todayKey();
-    const claimedToday  = state.work.lastWorkDate === today;
+    const today          = todayKey();
+    const claimedToday   = state.work.lastWorkDate === today;
     const selectedCareer = getSelectedCareer();
-    const unlockedList  = getUnlockedCareers();
+    const unlockedList   = getUnlockedCareers();
+    const streak         = state.work.workStreak || 0;
 
-    // ── Salary section ──
-    let salarySection = '';
+    // Salary strip
+    let salaryHTML = '';
     if (!selectedCareer) {
-      salarySection = `<div class="koin-work-empty">
-        还没有选择追踪的职业。<br>
-        先去 Career Center 解锁职业，再回来开始上班领薪资。
-      </div>`;
-    } else if (!isCareerUnlocked(selectedCareer.id)) {
-      salarySection = `<div class="koin-work-empty">
-        ${selectedCareer.emoji || '💼'} <b>${selectedCareer.name}</b> 还没解锁。<br>
-        继续提升相关能力，达到条件后才可以开始上班。
-      </div>`;
-    } else {
-      const salaryDef  = DAILY_SALARY[selectedCareer.id];
-      const baseSalary = salaryDef ? salaryDef.amount : 200;
-      const streakDay  = ((state.work.workStreak - 1) % 7) + 1;
-      const streakEntry = state.work.workStreak > 0 ? STREAK_BONUSES[streakDay - 1] : null;
-      const nextBonus  = !claimedToday && streakEntry ? streakEntry.bonus : 0;
-
-      salarySection = `
-        ${claimedToday ? `<div class="koin-work-done-note visible">✅ 今天已经上班了，明天回来继续！</div>` : ''}
-        <div class="koin-work-salary-row">
-          <div class="koin-work-salary-info">
-            <div class="koin-work-salary-amount">+${baseSalary}${nextBonus ? `<span style="font-size:14px;color:#FF8C42"> +${nextBonus}</span>` : ''} 🪙</div>
-            <div class="koin-work-salary-label">${selectedCareer.emoji || '💼'} ${selectedCareer.name} · 每日薪资${nextBonus ? ' + 连续奖励' : ''}</div>
+      salaryHTML = `
+        <div class="kwc-salary-strip">
+          <div class="kwc-salary-meta">
+            <div class="kwc-salary-amount">-- 🪙</div>
+            <div class="kwc-salary-sub">先去 Career Center 追踪职业</div>
           </div>
-          <button class="koin-work-claim-btn ${claimedToday ? 'done' : ''}" onclick="claimDailySalary()">
-            ${claimedToday ? '✅ 已领取' : '💼 上班'}
+          <button class="kwc-claim-btn done">🔒 未追踪</button>
+        </div>`;
+    } else if (!isCareerUnlocked(selectedCareer.id)) {
+      salaryHTML = `
+        <div class="kwc-salary-strip">
+          <div class="kwc-salary-meta">
+            <div class="kwc-salary-amount">${selectedCareer.emoji} 未解锁</div>
+            <div class="kwc-salary-sub">继续提升能力，才能开始上班</div>
+          </div>
+          <button class="kwc-claim-btn done">🔒 未解锁</button>
+        </div>`;
+    } else {
+      const salDef    = DAILY_SALARY[selectedCareer.id];
+      const base      = salDef ? salDef.amount : 200;
+      const sPos      = streak > 0 ? ((streak - 1) % 7) : 0;
+      const nextEntry = !claimedToday ? STREAK_BONUSES[sPos] : null;
+      const nextBonus = nextEntry ? nextEntry.bonus : 0;
+      const nextChest = nextEntry ? nextEntry.special : false;
+
+      salaryHTML = `
+        <div class="kwc-salary-strip">
+          <div class="kwc-salary-meta">
+            <div class="kwc-salary-amount">
+              +${base}${nextBonus ? `<small> +${nextBonus}</small>` : ''}${nextChest ? '<small> +🎁</small>' : ''} 🪙
+            </div>
+            <div class="kwc-salary-sub">
+              ${selectedCareer.emoji} ${selectedCareer.name}
+              ${nextBonus ? ' · 含连续奖励' : ''}${nextChest ? ' · 含宝箱' : ''}
+            </div>
+          </div>
+          <button class="kwc-claim-btn ${claimedToday ? 'done' : ''}" data-work-claim="1">
+            ${claimedToday ? '✅ 已上班' : '💼 上班'}
           </button>
-        </div>
-      `;
+        </div>`;
     }
 
-    // ── Streak row ──
-    const currentStreak = state.work.workStreak || 0;
-    const streakDayPos  = currentStreak > 0 ? ((currentStreak - 1) % 7) + 1 : 0;
-
-    const streakDots = STREAK_BONUSES.map((s, i) => {
-      const dayNum   = i + 1;
-      const isDone   = currentStreak > 0 && dayNum < streakDayPos;
-      const isToday  = currentStreak > 0 && dayNum === streakDayPos && state.work.lastWorkDate === today;
-      const isChest  = s.special;
-
-      let cls = 'koin-work-streak-bubble';
-      if (isDone)   cls += ' done';
-      if (isToday)  cls += ' today';
-      if (isChest)  cls += ' chest';
-
-      const inner = isChest ? '🎁' : `+${s.bonus || '?'}`;
-
+    // Streak bubbles
+    const streakDayInCycle = streak > 0 ? ((streak - 1) % 7) + 1 : 0;
+    const streakBubbles = STREAK_BONUSES.map((s, i) => {
+      const n       = i + 1;
+      const isDone  = streak > 0 && n < streakDayInCycle;
+      const isToday = streak > 0 && n === streakDayInCycle && claimedToday;
+      let cls = 'kwc-streak-bubble' + (isDone ? ' done' : '') + (isToday ? ' today' : '') + (s.special ? ' chest' : '');
       return `
-        <div class="koin-work-streak-day">
-          <div class="${cls}">${inner}</div>
-          <div class="koin-work-streak-label">${s.label}</div>
+        <div class="kwc-streak-slot">
+          <div class="${cls}">${s.special ? '🎁' : (isDone || isToday ? '✓' : n)}</div>
+          <div class="kwc-streak-day-lbl">${s.label}</div>
+          <div class="kwc-streak-bonus-lbl">${s.special ? '宝箱' : s.bonus ? `+${s.bonus}` : ''}</div>
         </div>`;
     }).join('');
 
-    // ── Unlocked careers list ──
-    let careersList = '';
+    // Unlocked careers
+    let careersHTML = '';
     if (unlockedList.length === 0) {
-      careersList = `<div style="font-size:12px;color:var(--muted,#756e83);font-weight:700;margin-top:14px">
-        还没有解锁任何职业。继续在地点成长中心提升能力！
+      careersHTML = `<div class="kwc-empty">
+        还没有解锁任何职业。<br>去 Career Center 提升能力，达到条件自动解锁！
       </div>`;
     } else {
-      const rows = unlockedList.map(career => {
-        const salaryDef = DAILY_SALARY[career.id];
-        const salary    = salaryDef ? salaryDef.amount : 200;
-        const isSelected = selectedCareer && selectedCareer.id === career.id;
-
+      const rows = unlockedList.map(c => {
+        const sal      = (DAILY_SALARY[c.id] || {}).amount || 200;
+        const isActive = selectedCareer && selectedCareer.id === c.id;
         return `
-          <div class="koin-work-career-row ${isSelected ? 'selected' : ''}"
-               onclick="selectCareerFromWork('${career.id}')">
-            <div class="koin-work-career-emoji">${career.emoji || '💼'}</div>
-            <div class="koin-work-career-info">
-              <div class="koin-work-career-name">${career.name}</div>
-              <div class="koin-work-career-salary">每日薪资 +${salary} 🪙</div>
+          <div class="kwc-career-row ${isActive ? 'active' : ''}" data-work-select="${c.id}">
+            <div class="kwc-career-emoji">${c.emoji}</div>
+            <div class="kwc-career-info">
+              <div class="kwc-career-name">${c.name}</div>
+              <div class="kwc-career-sal">每日薪资 +${sal} 🪙</div>
             </div>
-            <div class="koin-work-career-badge ${isSelected ? 'tracked' : ''}">
-              ${isSelected ? '✅ 工作中' : '切换'}
-            </div>
+            <div class="kwc-career-badge ${isActive ? 'active' : ''}">${isActive ? '✅ 工作中' : '切换'}</div>
           </div>`;
       }).join('');
-
-      careersList = `
-        <div style="font-size:13px;font-weight:900;margin-top:14px;margin-bottom:8px">💼 已解锁职业</div>
-        <div class="koin-work-careers">${rows}</div>`;
+      careersHTML = `
+        <div class="kwc-careers-label">💼 已解锁职业</div>
+        <div class="kwc-career-list">${rows}</div>`;
     }
 
     return `
       <div id="workCenterHub">
-        <div class="koin-work-hero">
-          <div class="koin-work-hero-row">
-            <div class="koin-work-icon">💼</div>
+        <div class="kwc-hero">
+          <div class="kwc-hero-row">
+            <div class="kwc-hero-icon">💼</div>
             <div>
               <h2>工作中心</h2>
-              <p>解锁职业后，每天上班领取薪资。连续工作 7 天可以获得宝箱奖励。</p>
+              <p>每天上班领薪资，连续 7 天解锁宝箱。职业等级越高，薪资越高！</p>
             </div>
           </div>
+          ${salaryHTML}
         </div>
-
-        <div class="koin-work-body">
-          ${salarySection}
-
-          <div class="koin-work-streak-title">
-            🔥 连续工作奖励
-            <span style="font-size:11px;color:var(--muted,#756e83);font-weight:700">
-              已连续 ${currentStreak} 天
-            </span>
-          </div>
-          <div class="koin-work-streak-row">${streakDots}</div>
-
-          ${careersList}
-
-          <div class="koin-work-total-row">
-            <span>💰 累计薪资收入</span>
-            <span class="koin-work-total-num">${state.work.totalEarned || 0} 🪙</span>
+        <div class="kwc-body">
+          ${claimedToday ? '<div class="kwc-done-note visible">✅ 今天已上班！明天记得回来继续连续奖励。</div>' : ''}
+          <div class="kwc-streak-label">🔥 连续工作奖励 <span>已连续 ${streak} 天</span></div>
+          <div class="kwc-streak-row">${streakBubbles}</div>
+          ${careersHTML}
+          <div class="kwc-total">
+            <div>💰 累计薪资收入</div>
+            <span>${(state.work.totalEarned || 0).toLocaleString()} 🪙</span>
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
-  // ── Inject into City Page ─────────────────────────────────────────────────
+  // ── Inject into city page ─────────────────────────────────────────────────
 
   function injectWorkHub() {
     if (!ensureWorkState()) return;
@@ -641,16 +494,18 @@
     if (!pageCity) return;
 
     const existing = $safe('workCenterHub');
-    if (existing) existing.remove();
+    if (existing) {
+      const fresh = document.createElement('div');
+      fresh.innerHTML = buildWorkHub();
+      existing.replaceWith(fresh.firstElementChild);
+      return;
+    }
 
-    // Insert after roomUpgradeHub if present, else after careerHub, else append
-    const roomHub   = $safe('roomUpgradeHub');
-    const careerHub = $safe('careerHub');
-    const anchor    = roomHub || careerHub || pageCity.lastElementChild;
-
+    const anchor = $safe('careerHub') || $safe('locationGrowthHub') || null;
     const wrapper = document.createElement('div');
-    wrapper.innerHTML = renderWorkCenter();
+    wrapper.innerHTML = buildWorkHub();
     const hub = wrapper.firstElementChild;
+    if (!hub) return;
 
     if (anchor && anchor.parentNode) {
       anchor.parentNode.insertBefore(hub, anchor.nextSibling);
@@ -659,14 +514,32 @@
     }
   }
 
+  // ── Event delegation ──────────────────────────────────────────────────────
+
+  document.body.addEventListener('click', function (e) {
+    const claimBtn = e.target.closest('[data-work-claim]');
+    if (claimBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.claimDailySalary();
+      return;
+    }
+    const selectBtn = e.target.closest('[data-work-select]');
+    if (selectBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.selectCareerFromWork(selectBtn.dataset.workSelect);
+      return;
+    }
+  }, true);
+
   // ── Patch render() ────────────────────────────────────────────────────────
 
-  const _originalRender = window.render;
-  if (typeof _originalRender === 'function' && !window.__koinWorkRenderPatchedV1) {
-    window.__koinWorkRenderPatchedV1 = true;
-
-    window.render = function patchedRenderWork() {
-      _originalRender();
+  const _origRender = window.render;
+  if (typeof _origRender === 'function' && !window.__koinWorkRenderPatchedV2) {
+    window.__koinWorkRenderPatchedV2 = true;
+    window.render = function patchedRenderWorkV2() {
+      _origRender();
       injectWorkStyles();
       injectWorkHub();
     };
@@ -679,8 +552,6 @@
   injectWorkHub();
   safeSave();
 
-  if (typeof render === 'function') render();
-
-  console.log('[Koin City V2] Work Center Patch v1 loaded');
+  console.log('[Koin City V2] Work Center Patch v2 loaded');
 
 })();
