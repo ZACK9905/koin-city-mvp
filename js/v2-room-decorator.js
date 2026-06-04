@@ -8,7 +8,7 @@
   // ─── SVG 尺寸常量（单一真相来源）─────────────────────────────────────────
   // 修复1: ORIGIN_X/Y 从 SVG 尺寸动态计算，不再写死
 
-  const SVG_W    = 600;
+  const SVG_W    = 800;
   const SVG_H    = 385;
   const ORIGIN_X = SVG_W / 2;   // 300 — 但现在改 SVG_W 就够了
   const ORIGIN_Y = SVG_H * 0.16; // ~62，比例而非像素
@@ -268,63 +268,58 @@
 
   // SVG diff: 只更新家具层和 hint，不重建 tiles/walls
   function _diffSVG(svg, rd, placement) {
-    // 1. 更新 hover 高亮（tile fills）
-    svg.querySelectorAll('polygon[data-cell]').forEach(p => {
-      const [c, r] = p.dataset.cell.split(',').map(Number);
-      const isHover = _hoverCell && _hoverCell.c === c && _hoverCell.r === r;
-      const fill = isHover ? 'rgba(124,92,252,0.40)' : (c+r)%2===0 ? rd.floorA : rd.floorB;
-      if (p.getAttribute('fill') !== fill) p.setAttribute('fill', fill);
-    });
 
-    // 2. 同步家具 — 计算 diff
-    const existingPieces = {};
-    svg.querySelectorAll('.koin-dec-piece').forEach(el => {
-      existingPieces[el.dataset.placedKey] = el;
-    });
+  // 1. 更新 hover（保留你的逻辑）
+  svg.querySelectorAll('polygon[data-cell]').forEach(p => {
+    const [c, r] = p.dataset.cell.split(',').map(Number);
 
-    const sortedEntries = Object.entries(placement).sort(([a],[b]) => {
-      const [ac,ar]=a.split(',').map(Number), [bc,br]=b.split(',').map(Number);
-      return (ac+ar)-(bc+br);
-    });
+    const isHover =
+      _hoverCell &&
+      _hoverCell.c === c &&
+      _hoverCell.r === r;
 
-    // Remove pieces no longer in placement
-    Object.keys(existingPieces).forEach(key => {
-      if (!placement[key]) existingPieces[key].remove();
-    });
+    const fill =
+      isHover
+        ? 'rgba(124,92,252,0.40)'
+        : ((c + r) % 2 === 0 ? rd.floorA : rd.floorB);
 
-    // Add new pieces
-    sortedEntries.forEach(([key, type]) => {
-      const [c, r] = key.split(',').map(Number);
-      const existing = existingPieces[key];
-      if (existing) {
-        if (existing.dataset.type !== type) {
-        existing.remove();
-          const frag =
-            _buildPieceSVGEl(key, type, c, r);
-          if (frag) {
-            svg.appendChild(frag);
-            _attachPieceEvent(frag);
-      }
+    if (p.getAttribute('fill') !== fill) {
+      p.setAttribute('fill', fill);
     }
-    return;
+  });
+
+  // 2. ⭐家具层：直接重建（最简单版本）
+  const layer = svg.querySelector('#furnitureLayer');
+  if (!layer) return;
+
+  layer.innerHTML = '';
+
+  const sortedEntries = Object.entries(placement).sort(([a], [b]) => {
+    const [ac, ar] = a.split(',').map(Number);
+    const [bc, br] = b.split(',').map(Number);
+    return (ac + ar) - (bc + br);
+  });
+
+  sortedEntries.forEach(([key, type]) => {
+    const [c, r] = key.split(',').map(Number);
+
+    const piece = _buildPieceSVGEl(key, type, c, r);
+    if (!piece) return;
+
+    layer.appendChild(piece);
+    _attachPieceEvent(piece);
+  });
+
+  // 3. hint（保留你原逻辑）
+  const hint = svg.querySelector('.koin-dec-hint');
+  if (hint) {
+    hint.textContent = _selectedType
+      ? `已选：${FURNITURE_MAP[_selectedType]?.emoji} ${FURNITURE_MAP[_selectedType]?.label}｜点击地板放置`
+      : '从下方选择家具，拖或点击地板放置';
+
+    hint.setAttribute('fill', _selectedType ? '#7C5CFC' : 'rgba(0,0,0,0.35)');
   }
-  const frag =
-    _buildPieceSVGEl(key, type, c, r);
-  if (!frag) return;
-  svg.appendChild(frag);
-  _attachPieceEvent(frag);
-});
-    // 3. Update cursor + hint text
-    svg.style.cursor = _selectedType ? 'crosshair' : 'default';
-    const hint = svg.querySelector('.koin-dec-hint');
-    if (hint) {
-      hint.textContent = _selectedType
-        ? `已选：${FURNITURE_MAP[_selectedType]?.emoji} ${FURNITURE_MAP[_selectedType]?.label}｜点击地板放置`
-        : '从下方选择家具，拖或点击地板放置';
-      hint.setAttribute('fill', _selectedType ? '#7C5CFC' : 'rgba(0,0,0,0.35)');
-      hint.setAttribute('font-weight', _selectedType ? '700' : '400');
-    }
-  }
+}
 
   function _buildPieceSVGEl(key, type, c, r) {
     const fb = FURNITURE_MAP[type];
@@ -373,6 +368,9 @@
     return `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" width="100%" id="koinRoomSVG"
       style="display:block;cursor:default;touch-action:none">
       ${walls}${tiles}
+
+      <g id="furnitureLayer"></g>
+      
       <rect x="0" y="${SVG_H-17}" width="${SVG_W}" height="17" fill="rgba(0,0,0,0.03)"/>
       <text class="koin-dec-hint" x="${SVG_W/2}" y="${SVG_H-6}"
         text-anchor="middle" font-size="11" fill="rgba(0,0,0,0.35)">
@@ -394,9 +392,6 @@
       _hoverCell = null; markDirty('svg'); renderDecorator();
     });
     svg.addEventListener('drop', e => {
-      e.preventDefault();
-      const type = e.dataTransfer.getData('text/plain') || _selectedType;
-      svg.addEventListener('drop', e => {
         e.preventDefault();
       const type =
     e.dataTransfer.getData('text/plain')
@@ -480,6 +475,8 @@
   }
 
 });
+
+}
 
   function _attachPieceEvent(piece) {
     piece.addEventListener('click', e => {
@@ -610,12 +607,20 @@
       canvas.appendChild(svg);
       _attachSVGEvents(svg);
       // Add existing pieces
-      Object.entries(pl).forEach(([key, type]) => {
-        const [c, r] = key.split(',').map(Number);
-        const piece  = _buildPieceSVGEl(key, type, c, r);
-        if (piece) { svg.appendChild(piece); _attachPieceEvent(piece); }
-      });
-    }
+      const layer = svg.querySelector('#furnitureLayer');
+if (!layer) return;
+
+layer.innerHTML = '';
+
+Object.entries(pl).forEach(([key, type]) => {
+  const [c, r] = key.split(',').map(Number);
+
+  const piece = _buildPieceSVGEl(key, type, c, r);
+  if (!piece) return;
+
+  layer.appendChild(piece);
+  _attachPieceEvent(piece);
+});
 
     // Picker item events
     body.querySelectorAll('.koin-dec-item').forEach(item => {
