@@ -507,31 +507,10 @@
 
     const pageCity = $safe('page-city');
     if (!pageCity) return;
-
-    // Remove existing hub if present (for re-renders)
-    const existing = $safe('roomUpgradeHub');
-    if (existing) {
-      // Remove hub + its sibling warning/furniture section
-      let el = existing.closest('.koin-room-hub');
-      if (el) {
-        // Also remove the warning and furniture section that follow
-        const parent = el.parentNode;
-        const hubIdx = Array.from(parent.children).indexOf(el);
-        // Remove up to 2 following siblings that belong to this widget
-        let toRemove = [el];
-        let next = el.nextElementSibling;
-        let count = 0;
-        while (next && count < 2) {
-          if (next.classList.contains('koin-slot-warning') ||
-              next.classList.contains('koin-furniture-section')) {
-            toRemove.push(next);
-          }
-          next = next.nextElementSibling;
-          count++;
-        }
-        toRemove.forEach(n => n.parentNode && n.parentNode.removeChild(n));
-      }
-    }
+    
+    pageCity.querySelectorAll('.koin-room-hub').forEach(e=>e.remove());
+    pageCity.querySelectorAll('.koin-slot-warning').forEach(e=>e.remove());
+    pageCity.querySelectorAll('.koin-furniture-section').forEach(e=>e.remove());
 
     // Find insertion point: after locationGrowthHub if present, else after guide-card
     const locationHub = $safe('locationGrowthHub');
