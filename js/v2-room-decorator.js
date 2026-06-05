@@ -5,13 +5,10 @@
 
 (function () {
 
-  // ─── SVG 尺寸常量（单一真相来源）─────────────────────────────────────────
-  // 修复1: ORIGIN_X/Y 从 SVG 尺寸动态计算，不再写死
-
   const SVG_W    = 800;
   const SVG_H    = 385;
-  const ORIGIN_X = SVG_W / 2;   // 300 — 但现在改 SVG_W 就够了
-  const ORIGIN_Y = SVG_H * 0.16; // ~62，比例而非像素
+  const ORIGIN_X = SVG_W / 2;
+  const ORIGIN_Y = SVG_H * 0.16;
 
   const GRID_COLS = 6;
   const GRID_ROWS = 5;
@@ -41,8 +38,6 @@
 
   const FURNITURE_MAP = Object.fromEntries(FURNITURE_CATALOG.map(f => [f.type, f]));
 
-  // ─── State helpers ─────────────────────────────────────────────────────────
-
   function getPlacement() {
     if (!window.state.roomPlacement) window.state.roomPlacement = {};
     return window.state.roomPlacement;
@@ -68,8 +63,6 @@
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
-
-  // ─── Daily bonus (真正写入 state.stats) ───────────────────────────────────
 
   function applyDailyDecoratorBonus() {
     if (!window.state) return;
@@ -102,8 +95,6 @@
     safeBurst('🛋️');
   }
 
-  // ─── ISO helpers ───────────────────────────────────────────────────────────
-
   function isoProject(col, row) {
     return {
       x: (col - row) * ISO_X / 2 + ORIGIN_X,
@@ -133,27 +124,16 @@
     };
   }
 
-  // ─── UI state ──────────────────────────────────────────────────────────────
-
   let _selectedType  = null;
   let _hoverCell     = null;
   let _isDragging    = false;
   let _activeTab     = 'room';
   let _lastPlacedKey = null;
 
-  // ─── 修复3: 分层渲染 ───────────────────────────────────────────────────────
-  // 把 DOM 分成三层，各自独立更新，不每次重建整棵树：
-  //   Layer A — Shell      (header + tabs)          → 只在 tab/houseLevel 变化时重建
-  //   Layer B — SVG Room   (#koinRoomSVG)            → 只在 placement/hover/selected 变化时重建
-  //   Layer C — Tab body   (.koin-dec-body)          → 只在 tab 内容数据变化时重建
-  //
-  // 用"脏标记"控制哪一层需要更新，避免无谓的全量重渲。
-
   const dirty = { shell: true, svg: true, body: true };
 
   function markDirty(...layers) { layers.forEach(l => dirty[l] = true); }
 
-  // 入口：外部统一调用这个
   function renderDecorator() {
     if (!window.state) return;
     injectStyles();
@@ -161,7 +141,6 @@
     const page = document.getElementById(PAGE_ID);
     if (!page) return;
 
-    // ── Layer A: Shell ──
     let wrap = document.getElementById('koinDecoratorWidget');
     if (!wrap || dirty.shell) {
       if (wrap) wrap.remove();
@@ -177,23 +156,20 @@
 
       _attachShellEvents(wrap);
       dirty.shell = false;
-      dirty.svg   = true; // shell 重建后子层都需要刷新
+      dirty.svg   = true;
       dirty.body  = true;
     }
 
-    // ── Layer B: SVG ──
     if (_activeTab === 'room' && dirty.svg) {
       _patchSVG(wrap);
       dirty.svg = false;
     }
 
-    // ── Layer C: Tab body ──
     if (dirty.body) {
       _patchBody(wrap);
       dirty.body = false;
     }
 
-    // 放置动画（在 patch 之后，节点已存在）
     if (_lastPlacedKey) {
       const piece = wrap.querySelector(`[data-placed-key="${_lastPlacedKey}"]`);
       if (piece) {
@@ -203,8 +179,6 @@
       _lastPlacedKey = null;
     }
   }
-
-  // ── Layer A: Shell (header + tabs 骨架) ──────────────────────────────────
 
   function _buildShell() {
     const rd    = getRoomDef();
@@ -239,8 +213,6 @@
     });
   }
 
-  // ── Layer B: SVG patch (只替换 SVG 元素本身) ─────────────────────────────
-
   function _patchSVG(wrap) {
     const container = wrap.querySelector('.koin-dec-canvas');
     if (!container) return;
@@ -249,11 +221,9 @@
     const placement = getPlacement();
     const existing  = container.querySelector('#koinRoomSVG');
 
-    // 如果 SVG 已存在，做细粒度 DOM diff 而非整体替换
     if (existing) {
       _diffSVG(existing, rd, placement);
     } else {
-      existing && existing.remove();
       const tmp = document.createElement('div');
       tmp.innerHTML = _buildSVGString(rd, placement);
       const newSvg = tmp.firstElementChild;
@@ -261,65 +231,46 @@
       _attachSVGEvents(newSvg);
     }
 
-    // 更新槽位数字（header 里的小 badge）
     const badge = wrap.querySelector('#koinDecSlots');
     if (badge) badge.textContent = `${Object.keys(placement).length}/${rd.slots} 家具槽`;
   }
 
-  // SVG diff: 只更新家具层和 hint，不重建 tiles/walls
   function _diffSVG(svg, rd, placement) {
-
-  // 1. 更新 hover（保留你的逻辑）
-  svg.querySelectorAll('polygon[data-cell]').forEach(p => {
-    const [c, r] = p.dataset.cell.split(',').map(Number);
-
-    const isHover =
-      _hoverCell &&
-      _hoverCell.c === c &&
-      _hoverCell.r === r;
-
-    const fill =
-      isHover
+    svg.querySelectorAll('polygon[data-cell]').forEach(p => {
+      const [c, r] = p.dataset.cell.split(',').map(Number);
+      const isHover = _hoverCell && _hoverCell.c === c && _hoverCell.r === r;
+      const fill = isHover
         ? 'rgba(124,92,252,0.40)'
         : ((c + r) % 2 === 0 ? rd.floorA : rd.floorB);
+      if (p.getAttribute('fill') !== fill) p.setAttribute('fill', fill);
+    });
 
-    if (p.getAttribute('fill') !== fill) {
-      p.setAttribute('fill', fill);
+    const layer = svg.querySelector('#furnitureLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+
+    const sortedEntries = Object.entries(placement).sort(([a], [b]) => {
+      const [ac, ar] = a.split(',').map(Number);
+      const [bc, br] = b.split(',').map(Number);
+      return (ac + ar) - (bc + br);
+    });
+
+    sortedEntries.forEach(([key, type]) => {
+      const [c, r] = key.split(',').map(Number);
+      const piece = _buildPieceSVGEl(key, type, c, r);
+      if (!piece) return;
+      layer.appendChild(piece);
+      _attachPieceEvent(piece);
+    });
+
+    const hint = svg.querySelector('.koin-dec-hint');
+    if (hint) {
+      hint.textContent = _selectedType
+        ? `已选：${FURNITURE_MAP[_selectedType]?.emoji} ${FURNITURE_MAP[_selectedType]?.label}｜点击地板放置`
+        : '从下方选择家具，拖或点击地板放置';
+      hint.setAttribute('fill', _selectedType ? '#7C5CFC' : 'rgba(0,0,0,0.35)');
     }
-  });
-
-  // 2. ⭐家具层：直接重建（最简单版本）
-  const layer = svg.querySelector('#furnitureLayer');
-  if (!layer) return;
-
-  layer.innerHTML = '';
-
-  const sortedEntries = Object.entries(placement).sort(([a], [b]) => {
-    const [ac, ar] = a.split(',').map(Number);
-    const [bc, br] = b.split(',').map(Number);
-    return (ac + ar) - (bc + br);
-  });
-
-  sortedEntries.forEach(([key, type]) => {
-    const [c, r] = key.split(',').map(Number);
-
-    const piece = _buildPieceSVGEl(key, type, c, r);
-    if (!piece) return;
-
-    layer.appendChild(piece);
-    _attachPieceEvent(piece);
-  });
-
-  // 3. hint（保留你原逻辑）
-  const hint = svg.querySelector('.koin-dec-hint');
-  if (hint) {
-    hint.textContent = _selectedType
-      ? `已选：${FURNITURE_MAP[_selectedType]?.emoji} ${FURNITURE_MAP[_selectedType]?.label}｜点击地板放置`
-      : '从下方选择家具，拖或点击地板放置';
-
-    hint.setAttribute('fill', _selectedType ? '#7C5CFC' : 'rgba(0,0,0,0.35)');
   }
-}
 
   function _buildPieceSVGEl(key, type, c, r) {
     const fb = FURNITURE_MAP[type];
@@ -368,9 +319,7 @@
     return `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" width="100%" id="koinRoomSVG"
       style="display:block;cursor:default;touch-action:none">
       ${walls}${tiles}
-
       <g id="furnitureLayer"></g>
-      
       <rect x="0" y="${SVG_H-17}" width="${SVG_W}" height="17" fill="rgba(0,0,0,0.03)"/>
       <text class="koin-dec-hint" x="${SVG_W/2}" y="${SVG_H-6}"
         text-anchor="middle" font-size="11" fill="rgba(0,0,0,0.35)">
@@ -379,7 +328,6 @@
   }
 
   function _attachSVGEvents(svg) {
-    // Desktop drag
     svg.addEventListener('dragover', e => {
       e.preventDefault();
       const cell = nearestCell(...Object.values(svgCoordsFromEvent(e, svg)));
@@ -388,37 +336,27 @@
       markDirty('svg');
       renderDecorator();
     });
+
     svg.addEventListener('dragleave', () => {
       _hoverCell = null; markDirty('svg'); renderDecorator();
     });
+
     svg.addEventListener('drop', e => {
-        e.preventDefault();
-      const type =
-    e.dataTransfer.getData('text/plain')
-    || _selectedType;
-  if (type && _hoverCell) {
-    const cell = _hoverCell;
+      e.preventDefault();
+      const type = e.dataTransfer.getData('text/plain') || _selectedType;
+      if (type && _hoverCell) {
+        const cell  = _hoverCell;
+        _hoverCell  = null;
+        _isDragging = false;
+        placeFurniture(type, cell.c, cell.r);
+        return;
+      }
+      _hoverCell  = null;
+      _isDragging = false;
+      markDirty('svg');
+      renderDecorator();
+    });
 
-    _hoverCell  = null;
-    _isDragging = false;
-
-    placeFurniture(
-      type,
-      cell.c,
-      cell.r
-    );
-
-    return;
-  }
-
-  _hoverCell  = null;
-  _isDragging = false;
-
-  markDirty('svg');
-  renderDecorator();
-});
-
-    // Click to place
     svg.addEventListener('click', e => {
       if (_isDragging || !_selectedType) return;
       const coords = svgCoordsFromEvent(e, svg);
@@ -431,7 +369,6 @@
       placeFurniture(_selectedType, cell.c, cell.r);
     });
 
-    // Touch
     svg.addEventListener('touchmove', e => {
       e.preventDefault();
       const { x, y } = svgCoordsFromEvent(e, svg);
@@ -441,42 +378,22 @@
     }, { passive: false });
 
     svg.addEventListener('touchend', () => {
-
-  let placed = false;
-
-  if (
-    _isDragging &&
-    _selectedType &&
-    _hoverCell
-  ) {
-
-    const cell = _hoverCell;
-
-    _isDragging = false;
-    _hoverCell  = null;
-
-    placeFurniture(
-      _selectedType,
-      cell.c,
-      cell.r
-    );
-
-    placed = true;
+      let placed = false;
+      if (_isDragging && _selectedType && _hoverCell) {
+        const cell  = _hoverCell;
+        _isDragging = false;
+        _hoverCell  = null;
+        placeFurniture(_selectedType, cell.c, cell.r);
+        placed = true;
+      }
+      if (!placed) {
+        _isDragging = false;
+        _hoverCell  = null;
+        markDirty('svg');
+        renderDecorator();
+      }
+    });
   }
-
-  if (!placed) {
-
-    _isDragging = false;
-    _hoverCell  = null;
-
-    markDirty('svg');
-
-    renderDecorator();
-  }
-
-});
-
-}
 
   function _attachPieceEvent(piece) {
     piece.addEventListener('click', e => {
@@ -489,8 +406,6 @@
       renderDecorator();
     });
   }
-
-  // ── Layer C: Tab body patch ───────────────────────────────────────────────
 
   function _patchBody(wrap) {
     const body = wrap.querySelector('.koin-dec-body');
@@ -515,7 +430,6 @@
       const count  = owned[fb.type] || 0;
       if (!count) return;
       const inRoom = Object.values(placement).filter(t => t === fb.type).length;
-      // 修复2: Math.max(0, ...) 防止负数
       const avail  = Math.max(0, count - inRoom);
       const isSel  = _selectedType === fb.type;
       pickerHtml  += `
@@ -548,18 +462,17 @@
       .forEach(([, type]) => {
         const fb = FURNITURE_MAP[type];
         if (!fb) return;
-        bonuses[fb.stat] =
-          (bonuses[fb.stat] || 0) + fb.bonus;
-});
+        bonuses[fb.stat] = (bonuses[fb.stat] || 0) + fb.bonus;
+      });
 
     if (!Object.keys(bonuses).length) return `
       <div class="koin-dec-bonus">
         <div class="koin-dec-empty">摆放家具后，这里显示每日成长加成（会真正写入你的成长数值）。</div>
       </div>`;
 
-    const total       = Object.values(bonuses).reduce((a,b)=>a+b,0);
-    const claimed     = window.state.decoratorBonusDate === getTodayStr();
-    const rows        = Object.entries(bonuses).map(([stat, val]) => `
+    const total   = Object.values(bonuses).reduce((a,b)=>a+b,0);
+    const claimed = window.state.decoratorBonusDate === getTodayStr();
+    const rows    = Object.entries(bonuses).map(([stat, val]) => `
       <div class="koin-dec-bonus-row">
         <span class="koin-dec-bonus-label">${stat}</span>
         <span class="koin-dec-bonus-val">+${val} / 天</span>
@@ -596,7 +509,6 @@
   }
 
   function _attachBodyEvents(body) {
-    // SVG canvas slot (room tab only)
     const canvas = body.querySelector('#koinDecCanvas');
     if (canvas) {
       const rd  = getRoomDef();
@@ -606,9 +518,8 @@
       const svg = tmp.firstElementChild;
       canvas.appendChild(svg);
       _attachSVGEvents(svg);
-      // nothing — furniture is handled by _diffSVG
+    }
 
-    // Picker item events
     body.querySelectorAll('.koin-dec-item').forEach(item => {
       item.addEventListener('click', () => {
         const type = item.dataset.pick;
@@ -632,7 +543,6 @@
       }, { passive: true });
     });
 
-    // Shop buy buttons
     body.querySelectorAll('.koin-dec-buy-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (btn.disabled || btn.classList.contains('cant')) return;
@@ -641,8 +551,6 @@
       });
     });
   }
-
-  // ─── Place furniture ────────────────────────────────────────────────────────
 
   function placeFurniture(type, c, r) {
     const rd        = getRoomDef();
@@ -673,8 +581,6 @@
     safeToast(`${FURNITURE_MAP[type]?.emoji} ${FURNITURE_MAP[type]?.label} 已摆放！`);
   }
 
-  // ─── Color helpers ─────────────────────────────────────────────────────────
-
   function baseColor(type) {
     return ({ desk:'#A0785A',bookshelf:'#6B4423',computer:'#4A4A7A',treadmill:'#3A7A5F',
       sofa:'#A05438',plant:'#3A7A5F',trophy:'#C8960B',whiteboard:'#5A9FE0',
@@ -686,8 +592,6 @@
       sofa:'#7A3A20',plant:'#1A5A3F',trophy:'#A07808',whiteboard:'#3A7FC0',
       lamp:'#C09010',tree:'#1A7B1A',starterDesk:'#7A5A3A' })[type] || '#555';
   }
-
-  // ─── Styles ────────────────────────────────────────────────────────────────
 
   function injectStyles() {
     if (document.getElementById('koinDecoratorStyles')) return;
@@ -764,8 +668,6 @@
     document.head.appendChild(s);
   }
 
-  // ─── Hook render() ─────────────────────────────────────────────────────────
-
   function hookRender() {
     if (window.__koinDecoratorRenderPatched) return;
     if (typeof render !== 'function') { setTimeout(hookRender, 50); return; }
@@ -774,12 +676,10 @@
     window.render = function patchedRenderDecorator() {
       _orig();
       applyDailyDecoratorBonus();
-      markDirty('shell', 'svg', 'body'); // 外部 render 触发时全量刷新
+      markDirty('shell', 'svg', 'body');
       renderDecorator();
     };
   }
-
-  // ─── Boot ──────────────────────────────────────────────────────────────────
 
   injectStyles();
   applyDailyDecoratorBonus();
