@@ -265,7 +265,7 @@ function renderTutorialOverlay() {
 
     const copy = {
       lifeEvent: ['🎮', '完成一个人生事件', '选择一个答案后，Koin 会继续下一步。'],
-      quest: ['📜', '领取一个任务奖励', '领取成功后，Koin 会继续下一步。'],
+      quest: ['📜', '领取一个任务��励', '领取成功后，Koin 会继续下一步。'],
       shop: ['🛋️', '购买一个家具', '买到第一个物品后，Koin 会继续下一步。']
     }[state.tutorial.awaiting];
 
@@ -407,10 +407,6 @@ function renderCareerSummary() {
 }
 
 function render() {
-  if (typeof dailySync === 'function') {
-    dailySync();
-  }
-
   setupMapDrag();
   renderNextAction();
 
@@ -477,7 +473,7 @@ function render() {
 
   $('personalityText').textContent = `Koin 会根据 ${state.childName} 的选择，调整任务和导师提问。现在最值得训练的是：${traits[0]}。`;
 
-  $('lifeSummary').innerHTML = `${state.childName} 现在来到第 <b>${state.day}</b> 天。系统记录了 <b>${state.history.length}</b> 次人生选择。${hasDoneLifeEventToday() ? '今天的主要事件已经完成。' : '今天还有一个主要事件可以完成。'}<br><br><b>职业方向：</b>${renderCareerSummary()}<br><b>今日地点成长：</b>${state.dailyLocationActions || 0}/2`;
+  $('lifeSummary').innerHTML = `${state.childName} 现在来到第 <b>${state.day}</b> 天。系统记录了 <b>${state.history.length}</b> 次人生选择。${hasDoneLifeEventToday() ? '今天的主事件已完成。' : '今天还没有做出人生选择。'}`;
 
   $('welcomeTitle').textContent = `欢迎回来，${state.childName}！`;
 
@@ -485,7 +481,7 @@ function render() {
   renderDailyEventLock(scene);
 
   $('timeline').innerHTML = state.history.length
-    ? state.history.map(h => `<div class="event"><b>Day ${h.day} · ${h.title}</b><p class="muted">选择：${h.choice}</p><p>${h.result}</p><div style="margin-top:8px"><span class="tag">${h.tag}</span><span class="tag green">${h.reward}</span></div></div>`).join('')
+    ? state.history.map(h => `<div class="event"><b>Day ${h.day} · ${h.title}</b><p class="muted">选择：${h.choice}</p><p>${h.result}</p><div style="margin-top:8px"><span class="tag">${h.tag}</span></div></div>`).join('')
     : '<p class="muted">还没有人生记录，先完成一个人生事件吧。</p>';
 
   $('questList').innerHTML = dailyQuests.map(q => {
@@ -520,7 +516,7 @@ function render() {
   }
 
   $('shopList').innerHTML = shopItems
-    .map(item => `<div class="shop-item"><div class="emoji">${item.emoji}</div><strong>${item.name}</strong><p class="muted">${item.desc}</p><button class="btn green" data-buy="${item.type}" data-cost="${item.cost}">${item.cost} 金币购买</button></div>`)
+    .map(item => `<div class="shop-item"><div class="emoji">${item.emoji}</div><strong>${item.name}</strong><p class="muted">${item.desc}</p><button class="btn green" data-buy="${item.type}" data-cost="${item.cost}">买 RM${item.cost}</button></div>`)
     .join('');
 
   const specialItemMap = {
@@ -537,7 +533,7 @@ function render() {
   }).join('');
 
   $('npcList').innerHTML = npcList
-    .map(n => `<div class="npc-card"><div class="npc-face">${n.emoji}</div><strong>${n.name}</strong><p class="muted">${n.desc}</p><div class="heartbar"><div class="heartfill" style="width:${state.npcHearts[n.key]}%"></div></div></div>`)
+    .map(n => `<div class="npc-card"><div class="npc-face">${n.emoji}</div><strong>${n.name}</strong><p class="muted">${n.desc}</p><div class="heartbar"><div class="heartfill" style="width:${state.npcHearts[n.key] || 0}%"></div></div></div>`)
     .join('');
 
   $('npcEvent').innerHTML = hasDoneNpcToday()
@@ -567,9 +563,9 @@ function render() {
     statLine('knowledge', '知识') +
     statLine('social', '沟通');
 
-  $('parentAdvice').innerHTML = `<p>建议本周不要只看结果，可以多问：“你为什么这样选？”</p><p style="margin-top:8px">目前系统观察到：<b>${traits.join('、')}</b>。</p><p style="margin-top:8px"><b>职业方向：</b>${renderCareerSummary()}</p><p style="margin-top:8px">可以鼓励孩子明天选择一个地点训练，例如学校提升知识、健身房提升活力、社交区提升沟通。</p>`;
+  $('parentAdvice').innerHTML = `<p>建议本周不要只看结果，可以多问："你为什么这样选？"</p><p style="margin-top:8px">目前系统观察到：<b>${traits.join('、')}</b>。</p>`;
 
-  $('shareSummary').innerHTML = `${state.childName} 本月完成了 ${state.history.length} 次人生选择练习。自律 ${state.stats.discipline - 50 >= 0 ? '+' : ''}${state.stats.discipline - 50}，知识 ${state.stats.knowledge}，创意 ${state.stats.creativity}，沟通 ${state.stats.social}。这不是成绩单，而是孩子真实的成长轨迹。`;
+  $('shareSummary').innerHTML = `${state.childName} 本月完成了 ${state.history.length} 次人生选择练习。自律 ${state.stats.discipline - 50 >= 0 ? '+' : ''}${state.stats.discipline - 50}% · 储蓄 ${state.stats.saving - 50 >= 0 ? '+' : ''}${state.stats.saving - 50}% · 判断力 ${state.stats.judgment - 50 >= 0 ? '+' : ''}${state.stats.judgment - 50}%。恭喜 ${state.childName}！`;
 
   $('childName').value = state.childName;
   $('childAge').value = state.childAge;
