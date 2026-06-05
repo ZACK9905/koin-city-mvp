@@ -581,6 +581,7 @@
 
     window.render = function patchedRenderRoom() {
       _originalRender();
+      
       injectRoomStyles();
       injectRoomHub();
     };
