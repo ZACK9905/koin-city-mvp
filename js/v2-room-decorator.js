@@ -194,7 +194,7 @@
       <div class="koin-dec-tabs">
         <button class="koin-dec-tab${_activeTab==='room'  ?' active':''}" data-tab="room">🛋️ 布置</button>
         <button class="koin-dec-tab${_activeTab==='bonus' ?' active':''}" data-tab="bonus">📊 加成</button>
-        <button class="koin-dec-tab${_activeTab==='shop'  ?' active':''}" data-tab="shop">🛍️ 商店</button>
+
       </div>
       <div class="koin-dec-body"></div>`;
     return el;
@@ -417,7 +417,6 @@
   function _buildBodyHTML() {
     if (_activeTab === 'room')  return _buildRoomBodyHTML();
     if (_activeTab === 'bonus') return _buildBonusHTML();
-    if (_activeTab === 'shop')  return _buildShopHTML();
     return '';
   }
 
@@ -485,28 +484,6 @@
     </div>`;
   }
 
-  function _buildShopHTML() {
-    const coins = window.state.coins || 0;
-    const cards = FURNITURE_CATALOG.filter(fb => !fb.inOriginalShop).map(fb => {
-      const can = coins >= fb.cost;
-      return `
-        <div class="koin-dec-shop-card">
-          <div class="koin-dec-shop-top">
-            <span class="koin-dec-shop-emoji">${fb.emoji}</span>
-            <div>
-              <div class="koin-dec-shop-name">${fb.label}</div>
-              <div class="koin-dec-shop-desc">${fb.desc}</div>
-            </div>
-          </div>
-          <button class="koin-dec-buy-btn${can?'':' cant'}"
-            data-buy="${fb.type}" data-cost="${fb.cost}" ${can?'':'disabled'}>
-            🪙 ${fb.cost} 金币
-          </button>
-        </div>`;
-    }).join('');
-
-    return `<div class="koin-dec-shop"><div class="koin-dec-shop-grid">${cards}</div></div>`;
-  }
 
   function _attachBodyEvents(body) {
     const canvas = body.querySelector('#koinDecCanvas');
@@ -543,13 +520,6 @@
       }, { passive: true });
     });
 
-    body.querySelectorAll('.koin-dec-buy-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.disabled || btn.classList.contains('cant')) return;
-        _activeTab = 'shop';
-        if (typeof buyItem === 'function') buyItem(btn.dataset.buy, Number(btn.dataset.cost));
-      });
-    });
   }
 
   function placeFurniture(type, c, r) {
@@ -639,21 +609,7 @@
       .koin-dec-bonus-total{margin-top:8px;padding:10px 14px;background:rgba(45,145,68,.10);
         border-radius:14px;font-size:12px;font-weight:800;color:#1A6B30;text-align:center}
       .koin-dec-empty{text-align:center;padding:24px;color:#aaa;font-size:13px;font-weight:700}
-      .koin-dec-shop{padding:12px}
-      .koin-dec-shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-      .koin-dec-shop-card{padding:12px;border-radius:16px;border:1.5px solid rgba(124,92,252,.12);
-        background:#fff;display:flex;flex-direction:column;gap:4px}
-      .koin-dec-shop-top{display:flex;align-items:center;gap:8px}
-      .koin-dec-shop-emoji{font-size:24px}
-      .koin-dec-shop-name{font-size:13px;font-weight:800;color:#333}
-      .koin-dec-shop-desc{font-size:11px;color:#888;font-weight:700}
-      .koin-dec-buy-btn{all:unset;margin-top:6px;display:flex;align-items:center;
-        justify-content:center;padding:7px;border-radius:12px;
-        background:linear-gradient(135deg,#7C5CFC,#FF8C42);color:#fff;
-        font-size:12px;font-weight:900;cursor:pointer;text-align:center;
-        transition:transform .12s,opacity .12s}
-      .koin-dec-buy-btn:hover{transform:translateY(-1px)}
-      .koin-dec-buy-btn.cant{opacity:.45;cursor:not-allowed;transform:none}
+
       @keyframes koinBounce{
         0%{transform:scale(0.3) translateY(-24px);opacity:0}
         60%{transform:scale(1.18) translateY(0);opacity:1}
