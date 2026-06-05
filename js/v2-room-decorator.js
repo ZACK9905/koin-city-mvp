@@ -641,9 +641,9 @@
   hookRender();
   
   // ✅ ONLY call bonus once on page load, never during re-renders
-  setTimeout(() => {
-    applyDailyDecoratorBonus();
-  }, 500);
+  //setTimeout(() => {
+  //  applyDailyDecoratorBonus();
+  //}, 500);
 
   console.log('[Koin City V2] Room Decorator Patch (架构优化版) loaded');
 
