@@ -581,7 +581,6 @@
 
     window.render = function patchedRenderRoom() {
       _originalRender();
-      applyDailyFurnitureBonus();
       injectRoomStyles();
       injectRoomHub();
     };
