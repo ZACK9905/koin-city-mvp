@@ -631,7 +631,6 @@
     const _orig = window.render;
     window.render = function patchedRenderDecorator() {
       _orig();
-      applyDailyDecoratorBonus();
       markDirty('shell', 'svg', 'body');
       renderDecorator();
     };
